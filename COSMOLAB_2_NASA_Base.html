@@ -1,0 +1,1425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050b16"><meta name="description" content="COSMOLAB — живая космическая база NASA">
+<title>COSMOLAB — NASA Base</title>
+<style>
+:root{--bg:#050a14;--panel:#0a1524;--panel2:#0e1c2f;--line:#1d3854;--text:#e9f5ff;--muted:#86a3bf;--cyan:#5fe0ff;--teal:#59efc2;--amber:#ffc46b;--red:#ff7d8e;--violet:#a795ff;--blue:#6ba9ff;--accent:var(--cyan);--shadow:0 22px 60px rgba(0,0,0,.55)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.42}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#hubCanvas{position:fixed;inset:0;display:block;width:100vw;height:100vh;touch-action:none;cursor:default}
+#hud{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;z-index:200;pointer-events:none}
+.hudChip{display:flex;align-items:center;gap:9px;height:48px;padding:0 16px 0 9px;border-radius:16px;background:linear-gradient(180deg,rgba(12,26,44,.92),rgba(6,15,27,.86));border:1px solid rgba(124,188,244,.28);box-shadow:0 8px 30px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-weight:850;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.hudChip span{line-height:1;padding-top:1px}
+.hudChip.money{color:#ffe0a3;border-color:rgba(255,196,107,.3)}
+.dayRing{position:relative;width:34px;height:34px;display:grid;place-items:center;color:var(--cyan);flex:none}
+.dayRing .ring{position:absolute;inset:0;transform:rotate(-90deg)}
+.dayRing .ring circle{fill:none;stroke-width:2.4}
+.dayRing .ring .track{stroke:rgba(134,183,226,.18)}
+.dayRing .ring .bar{stroke:var(--cyan);stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:94.25;transition:stroke .4s}
+.hudChip.money svg{width:25px;height:25px;flex:none}
+.dayRing svg.cal{width:21px;height:21px;position:relative;z-index:1}
+#dayChip.night .dayRing{color:var(--violet)}#dayChip.night .dayRing .ring .bar{stroke:var(--violet)}
+#toastIcon{position:fixed;left:50%;top:86px;transform:translate(-50%,0) scale(.5);z-index:210;font-size:28px;opacity:0;pointer-events:none;transition:opacity .2s,transform .3s;filter:drop-shadow(0 0 18px rgba(95,224,255,.5))}
+#toastIcon.on{opacity:1;transform:translate(-50%,0) scale(1)}
+#sceneNav{position:fixed;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));display:flex;gap:8px;z-index:200}
+.sceneBtn{width:46px;height:46px;border-radius:50%;border:1px solid rgba(128,192,244,.3);background:rgba(8,20,36,.8);backdrop-filter:blur(12px);display:grid;place-items:center;color:#cfeeff;box-shadow:0 8px 28px rgba(0,0,0,.4);transition:.2s}
+.sceneBtn:hover{background:rgba(24,56,88,.92);border-color:rgba(128,210,255,.6);transform:translateY(-1px)}
+.sceneBtn svg{width:22px;height:22px}
+#sceneNav[hidden]{display:none}
+#flash{position:fixed;inset:0;background:#d9fbff;opacity:0;pointer-events:none;z-index:150}
+#flash.go{animation:flash .8s ease-out}@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+#modalRoot{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:72px 18px 18px}#modalRoot[hidden]{display:none}
+#modalRoot .backdrop{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(12,32,58,.55),rgba(2,6,14,.86));backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:fadeIn .2s}
+#modalCard{--accent:var(--cyan);position:relative;width:min(1080px,calc(100vw - 36px));max-height:calc(100vh - 92px);display:flex;flex-direction:column;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,rgba(16,33,56,.98),rgba(5,13,25,.98) 70%);border:1px solid rgba(112,180,238,.28);box-shadow:var(--shadow),0 0 90px rgba(58,151,255,.12);animation:popIn .24s cubic-bezier(.2,.8,.25,1)}
+#modalCard[data-theme="science"]{--accent:var(--teal)}#modalCard[data-theme="storage"]{--accent:var(--amber)}#modalCard[data-theme="design"]{--accent:var(--blue)}#modalCard[data-theme="event"]{--accent:var(--amber)}#modalCard[data-theme="result"]{--accent:var(--teal)}
+#modalCard::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 80% 0%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 55%)}
+.modalHead{position:relative;display:flex;align-items:center;gap:14px;padding:17px 20px;border-bottom:1px solid rgba(110,170,224,.14);background:rgba(5,12,23,.35);flex:none}
+.modalIcon{width:48px;height:48px;flex:none;border-radius:15px;display:grid;place-items:center;font-size:25px;background:color-mix(in srgb,var(--accent) 12%,rgba(8,20,36,.9));border:1px solid color-mix(in srgb,var(--accent) 36%,transparent);box-shadow:0 0 26px color-mix(in srgb,var(--accent) 14%,transparent)}
+.modalHead .grow{min-width:0;flex:1}.modalKicker{font-size:10px;font-weight:850;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modalHead h2{margin:0;font-size:clamp(19px,2.1vw,26px);letter-spacing:-.03em;line-height:1.12}
+.closeBtn{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid rgba(120,170,218,.22);background:rgba(16,34,55,.7);color:#bfd8ee;display:grid;place-items:center;transition:.15s}
+.closeBtn:hover{background:rgba(50,42,58,.9);color:#fff;border-color:rgba(255,160,175,.5)}
+.closeBtn svg{width:18px;height:18px}
+.modalBody{padding:18px 20px 24px;overflow:auto;overscroll-behavior:contain;position:relative;scrollbar-width:thin;scrollbar-color:#2b5277 transparent}
+.modalBody::-webkit-scrollbar{width:8px}.modalBody::-webkit-scrollbar-thumb{background:#254866;border-radius:8px}
+.label{font-size:10px;font-weight:850;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:2px 0 8px;display:flex;align-items:center;gap:7px}
+.label b{color:var(--accent);letter-spacing:0}
+.stack{display:grid;gap:14px}.twoCol{display:grid;grid-template-columns:1fr 1fr;gap:14px}.threeCol{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{background:linear-gradient(180deg,rgba(15,33,55,.82),rgba(8,20,36,.72));border:1px solid rgba(96,156,210,.18);border-radius:16px;padding:13px}
+.card.soft{background:rgba(10,24,42,.56)}
+.missionGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.missionCard{position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;padding:13px;border-radius:16px;border:1px solid rgba(88,150,205,.2);background:linear-gradient(150deg,rgba(17,36,60,.88),rgba(7,17,31,.85));transition:.18s;overflow:hidden}
+.missionCard:hover{border-color:rgba(105,200,255,.45);transform:translateY(-2px)}.missionCard.active{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 55%,transparent),0 12px 34px rgba(0,0,0,.3)}
+.missionCard .planet{width:46px;height:46px;border-radius:50%;position:relative;box-shadow:inset -9px -8px 18px rgba(0,0,0,.5),0 0 22px rgba(98,190,255,.22)}
+.missionCard .planet.earth{background:radial-gradient(circle at 34% 30%,#84e8ff,#2578bd 46%,#10284a 78%)}.missionCard .planet.moon{background:radial-gradient(circle at 36% 32%,#edf2fa,#8e98a7 55%,#3b4a5f 82%)}.missionCard .planet.mars{background:radial-gradient(circle at 34% 30%,#ffc18d,#be644e 56%,#6b2e3d 85%)}
+.missionCard strong{font-size:14px;line-height:1.2}.missionCard .sub{font-size:11px;color:var(--muted);line-height:1.35;min-height:29px}
+.metaRow{display:flex;gap:6px;flex-wrap:wrap}.meta{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:750;color:#c9e0f3;background:rgba(6,16,30,.65);border:1px solid rgba(92,150,200,.18);border-radius:8px;padding:4px 7px}
+.meta svg{width:13px;height:13px;opacity:.8}.meta.gold{color:#ffd68f}.meta.cyan{color:#9eeaff}
+.segmented{display:flex;gap:5px;background:rgba(5,13,25,.65);padding:4px;border-radius:12px;border:1px solid rgba(86,140,190,.16);flex-wrap:wrap}
+.segBtn{flex:1;min-width:88px;padding:8px 10px;border-radius:9px;border:0;background:transparent;color:#97b4cf;font-weight:750;font-size:12px;transition:.15s}
+.segBtn.active{background:color-mix(in srgb,var(--accent) 20%,#122b46);color:#fff;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 12%,transparent)}
+.crewRow{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.crewBtn{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 5px;border-radius:12px;border:1px solid rgba(90,150,202,.16);background:rgba(7,18,33,.6);color:#86a3bd;font-size:10px;line-height:1.15;transition:.16s}
+.crewBtn .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(32,60,86,.55);font-size:16px;filter:grayscale(.7);opacity:.65}
+.crewBtn.active{border-color:color-mix(in srgb,var(--accent) 52%,transparent);background:color-mix(in srgb,var(--accent) 9%,rgba(8,20,36,.7));color:#e8f8ff;box-shadow:0 0 20px color-mix(in srgb,var(--accent) 10%,transparent)}
+.crewBtn.active .av{filter:none;opacity:1;background:color-mix(in srgb,var(--accent) 22%,#163a58)}
+.readiness{display:grid;gap:6px}
+.check{display:flex;align-items:center;gap:8px;font-size:12px;color:#b9d0e4;padding:6px 9px;border-radius:9px;background:rgba(6,16,30,.46);border:1px solid rgba(92,150,200,.12)}
+.check .dot{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;flex:none;background:rgba(255,125,142,.13);color:#ff9daa;border:1px solid rgba(255,125,142,.3)}
+.check.ok .dot{background:rgba(89,239,194,.13);color:#84f8d4;border-color:rgba(89,239,194,.32)}
+.check .v{margin-left:auto;font-weight:800;color:#e9f7ff;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(108,168,220,.22);border-radius:12px;background:rgba(21,46,73,.8);color:#e5f5ff;font-weight:780;font-size:13px;padding:10px 15px;transition:.16s;text-decoration:none}
+.btn:hover:not(:disabled){background:rgba(33,69,104,.95);border-color:rgba(125,205,255,.4);transform:translateY(-1px)}
+.btn.primary{border:0;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#eaffff));color:#041824;box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 20%,transparent)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.07);transform:translateY(-1px)}
+.btn.wide{width:100%;padding:13px 18px;font-size:14px}.btn.small{padding:7px 10px;font-size:11px;border-radius:9px}
+.btn.ghost{background:transparent;color:#9cb6ce}.btn.danger{color:#ff9baa;border-color:rgba(255,125,142,.28);background:rgba(80,25,38,.25)}
+.actionsRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btnIcon{width:36px;height:36px;padding:0;border-radius:10px}
+.progressBar{height:8px;border-radius:8px;background:rgba(5,14,26,.85);overflow:hidden;border:1px solid rgba(86,140,190,.14)}
+.progressBar span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 65%,#1b4e73),var(--accent));transition:width .4s}
+.statGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:rgba(6,16,30,.55);border:1px solid rgba(85,145,195,.13);border-radius:12px;padding:9px 10px}
+.stat .top{display:flex;align-items:center;gap:5px;justify-content:space-between;font-size:10px;color:#86a3bd;margin-bottom:4px;white-space:nowrap}
+.stat .top b{color:var(--accent);font-size:10px}.stat .v{font-size:15px;font-weight:850;letter-spacing:-.02em;margin-bottom:6px}.stat .v small{font-size:10px;color:#7f9bb6;font-weight:600}
+.barMini{height:5px;border-radius:6px;background:rgba(4,12,24,.85);overflow:hidden}.barMini span{display:block;height:100%;background:var(--accent);border-radius:6px}.barMini span.bad{background:var(--red)}.barMini span.warn{background:var(--amber)}
+.actionGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.actionBtn{display:flex;align-items:center;gap:9px;text-align:left;padding:11px 12px;border-radius:12px;border:1px solid rgba(90,150,202,.17);background:rgba(9,22,39,.62);transition:.16s}
+.actionBtn:hover:not(:disabled){background:rgba(20,48,76,.9);border-color:rgba(114,202,255,.38)}
+.actionBtn .ico{width:32px;height:32px;border-radius:9px;background:rgba(45,95,135,.3);display:grid;place-items:center;font-size:16px;flex:none}
+.actionBtn b{display:block;font-size:13px}.actionBtn small{display:block;font-size:10.5px;color:#809cb6;margin-top:2px}
+.alertCard{border:1px solid rgba(255,196,107,.38);background:linear-gradient(140deg,rgba(80,49,16,.48),rgba(26,21,18,.6));box-shadow:0 0 32px rgba(255,175,70,.09)}
+.alertCard .label{color:#ffc879}
+.partGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.part{display:grid;gap:5px;padding:9px 10px;border-radius:12px;background:rgba(6,17,31,.58);border:1px solid rgba(88,148,200,.14)}
+.part label{display:flex;align-items:center;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#87a2bb;font-weight:800}
+.part select{width:100%;border:1px solid rgba(90,150,202,.18);border-radius:8px;background:#0b1d32;color:#dff3ff;padding:7px 8px;font-size:11px;outline:none}
+.part select:disabled{opacity:.7}
+.rangeRow{display:flex;align-items:center;gap:12px}.rangeRow input{flex:1;accent-color:var(--accent)}.rangeVal{min-width:72px;text-align:right;font-size:13px;font-weight:850;color:var(--accent)}
+.matGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.mat{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:9px;background:rgba(6,16,30,.55);border:1px solid rgba(90,150,200,.12);font-size:11px;font-weight:750}
+.mat em{margin-left:auto;font-style:normal;font-size:10px;color:#90abc3}.mat.bad em{color:var(--red)}
+.techGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.techCard{display:flex;flex-direction:column;gap:6px;padding:11px;border-radius:14px;background:linear-gradient(165deg,rgba(14,35,54,.72),rgba(7,18,32,.66));border:1px solid rgba(88,150,200,.16)}
+.techCard .head{display:flex;align-items:center;gap:7px}.techCard .head .ic{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;background:rgba(45,95,135,.26);font-size:15px;flex:none}.techCard strong{font-size:12px;line-height:1.15}.techCard p{margin:0;font-size:10px;line-height:1.4;color:#86a3bd;min-height:28px}
+.pips{display:flex;gap:3px}.pip{width:14px;height:4px;border-radius:4px;background:rgba(110,155,193,.2)}.pip.on{background:var(--accent);box-shadow:0 0 8px color-mix(in srgb,var(--accent) 40%,transparent)}
+.techFoot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto}.techCost{font-size:10px;font-weight:750;color:#ffd48b;white-space:nowrap}
+.resGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.resCard{padding:12px;border-radius:14px;background:linear-gradient(165deg,rgba(14,35,54,.72),rgba(7,18,32,.66));border:1px solid rgba(88,150,200,.16);display:flex;flex-direction:column;gap:5px}
+.resCard .top{display:flex;align-items:center;gap:7px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8ca8c1;font-weight:800}.resCard .qty{font-size:23px;font-weight:900;letter-spacing:-.04em}.resCard .qty small{font-size:10px;color:#86a3bd;font-weight:650}
+.resCard .btn{width:100%;margin-top:3px}
+.jobLine{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:rgba(6,17,31,.55);border:1px solid rgba(88,150,200,.13);font-size:11px;color:#a9c2d8}
+.jobLine .barMini{flex:1}.jobLine b{color:#e6f7ff;font-size:11px;white-space:nowrap}
+.missionHero{display:flex;align-items:center;gap:14px;padding:13px;border-radius:16px;background:linear-gradient(140deg,rgba(20,45,74,.75),rgba(7,18,32,.7));border:1px solid rgba(94,158,212,.2)}
+.missionHero .planet{width:56px;height:56px;border-radius:50%;flex:none;box-shadow:inset -10px -9px 20px rgba(0,0,0,.5),0 0 30px rgba(95,190,255,.22)}
+.missionHero .planet.earth{background:radial-gradient(circle at 34% 30%,#8ceaff,#2474ba 48%,#0e2547 82%)}.missionHero .planet.moon{background:radial-gradient(circle at 36% 32%,#eef4fb,#8e98a7 56%,#3b4a5f 84%)}.missionHero .planet.mars{background:radial-gradient(circle at 34% 30%,#ffc18d,#be644e 56%,#6b2e3d 85%)}
+.missionHero .grow{flex:1;min-width:0}.missionHero h3{margin:0 0 3px;font-size:17px;letter-spacing:-.02em}.missionHero .sub{font-size:11px;color:#8da8c1}
+.phaseTag{font-size:10px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:20px;padding:5px 9px;white-space:nowrap}
+.dotsLine{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.dayDot{width:10px;height:10px;border-radius:50%;background:rgba(110,155,193,.18);border:1px solid rgba(110,155,193,.22)}.dayDot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 40%,transparent)}.dayDot.now{background:#fff;border-color:#fff;box-shadow:0 0 14px #fff}
+.choiceGrid{display:grid;gap:9px}.choice{display:flex;gap:11px;align-items:flex-start;text-align:left;padding:13px;border-radius:14px;border:1px solid rgba(96,156,210,.2);background:rgba(9,23,41,.65);transition:.16s}
+.choice:hover:not(:disabled){border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:rgba(20,48,78,.9);transform:translateY(-1px)}
+.choice .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:rgba(48,100,140,.26);flex:none}
+.choice b{display:block;font-size:13px;margin-bottom:3px}.choice small{display:block;font-size:11px;color:#8ba7c0;line-height:1.35}
+.choice .bonus{margin-left:auto;flex:none;font-size:11px;font-weight:850;color:var(--accent);background:rgba(5,15,28,.55);padding:5px 8px;border-radius:8px;border:1px solid rgba(96,156,210,.16);white-space:nowrap}
+.diceBox{display:flex;align-items:center;justify-content:center;gap:18px;padding:14px;flex-wrap:wrap}
+.die{width:86px;height:86px;border-radius:20px;display:grid;place-items:center;font-size:42px;font-weight:950;color:#06202e;background:linear-gradient(145deg,#eafcff,#8fe4ff);box-shadow:0 12px 36px rgba(72,206,255,.25),inset 0 -8px 16px rgba(15,69,100,.18);border:1px solid #fff;transform:rotate(-5deg)}
+.die.settle{animation:dieSettle .4s cubic-bezier(.2,1.5,.4,1)}@keyframes dieSettle{0%{transform:scale(1.35) rotate(12deg)}100%{transform:scale(1) rotate(-5deg)}}
+.diceMath{font-size:20px;font-weight:850;letter-spacing:.02em}.diceMath small{display:block;font-size:11px;color:#8ba7c0;font-weight:650;margin-top:4px}
+.resultHero{display:flex;align-items:center;gap:18px;padding:18px;border-radius:18px;background:linear-gradient(145deg,rgba(24,58,62,.52),rgba(7,20,32,.68));border:1px solid rgba(89,239,194,.24)}
+.resultHero.fail{background:linear-gradient(145deg,rgba(70,26,34,.45),rgba(18,11,18,.68));border-color:rgba(255,125,142,.24)}
+.resultIcon{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:40px;background:rgba(9,35,38,.65);border:1px solid rgba(89,239,194,.28);box-shadow:0 0 40px rgba(89,239,194,.12);flex:none}
+.resultHero.fail .resultIcon{background:rgba(48,17,24,.55);border-color:rgba(255,125,142,.3);box-shadow:0 0 40px rgba(255,125,142,.1)}
+.resultHero h3{margin:0 0 4px;font-size:24px;letter-spacing:-.03em}.resultHero p{margin:0;font-size:12px;color:#9ab3c9;line-height:1.45}
+.scoreRing{width:72px;height:72px;flex:none;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#163b4a,#081826 72%);border:2px solid var(--accent);box-shadow:0 0 24px color-mix(in srgb,var(--accent) 20%,transparent);font-size:23px;font-weight:950;color:#eaffff;margin-left:auto}
+.scoreRing small{font-size:9px;color:#8ca8bf;font-weight:700;display:block;text-align:center;margin-top:-2px}
+.reasonList{display:grid;gap:6px;margin:0;padding:0;list-style:none}.reasonList li{display:flex;gap:7px;font-size:11px;line-height:1.4;color:#a9c2d6}.reasonList li::before{content:"◆";color:var(--accent);font-size:8px;margin-top:3px;flex:none}
+.hintLine{font-size:10px;color:#7893ad;line-height:1.45}
+.moneyPill{display:inline-flex;align-items:center;gap:4px;font-weight:850;color:#ffd48b;white-space:nowrap}
+@keyframes popIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media(max-width:860px){#modalRoot{padding:66px 8px 8px}#modalCard{width:calc(100vw - 16px);max-height:calc(100vh - 74px);border-radius:18px}.modalHead{padding:12px 13px}.modalBody{padding:13px}.missionGrid,.techGrid,.resGrid{grid-template-columns:1fr 1fr}.statGrid{grid-template-columns:1fr 1fr}.partGrid,.twoCol{grid-template-columns:1fr}.modalIcon{width:41px;height:41px;font-size:21px}.hudChip{height:43px;font-size:17px;padding-right:13px}.crewRow{grid-template-columns:repeat(2,1fr)}.matGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.missionGrid,.techGrid,.resGrid{grid-template-columns:1fr}.statGrid{grid-template-columns:1fr 1fr}.actionGrid{grid-template-columns:1fr}.modalKicker{display:none}.modalHead h2{font-size:18px}.sceneBtn{width:42px;height:42px}.hudChip{height:40px;font-size:16px}.dayRing{width:30px;height:30px}.resultHero{flex-wrap:wrap}.scoreRing{margin-left:0}}
+</style>
+</head>
+<body>
+<canvas id="hubCanvas" aria-label="Космическая база NASA: хаб, лаборатория, склад, проектировочная и стартовая площадка"></canvas>
+<div id="hud">
+  <div class="hudChip" id="dayChip" title="Игровые дни"><div class="dayRing"><svg class="ring" viewBox="0 0 34 34"><circle class="track" cx="17" cy="17" r="15"/><circle class="bar" id="dayBar" cx="17" cy="17" r="15"/></svg><svg class="cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3.5v4M16 3.5v4"/><path d="M7.5 14h3M13.5 14h3M7.5 17.2h3"/></svg></div><span id="hudDays">1</span></div>
+  <div class="hudChip money" title="Деньги"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.8" rx="7.4" ry="3.1"/><path d="M4.6 6.8v4.3c0 1.7 3.3 3.1 7.4 3.1s7.4-1.4 7.4-3.1V6.8"/><path d="M4.6 11.1v4.3c0 1.7 3.3 3.1 7.4 3.1s7.4-1.4 7.4-3.1v-4.3"/><path d="M12 6.2v11.8"/></svg><span id="hudMoney">0</span></div>
+</div>
+<div id="sceneNav" hidden>
+  <button class="sceneBtn" id="navHub" title="Вернуться в хаб" aria-label="Вернуться в хаб"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg></button>
+  <button class="sceneBtn" id="navConsole" title="Пульт миссии" aria-label="Пульт миссии"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 8h4M7 11h7"/></svg></button>
+</div>
+<div id="toastIcon"></div><div id="flash"></div>
+<div id="modalRoot" hidden><div class="backdrop" data-close></div><section id="modalCard" role="dialog" aria-modal="true"><header class="modalHead"><div class="modalIcon" id="modalIcon">🖥️</div><div class="grow"><div class="modalKicker" id="modalKicker">NASA · ТЕРМИНАЛ</div><h2 id="modalTitle">Центр управления</h2></div><button class="closeBtn" data-close aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><div class="modalBody" id="modalBody"></div></section></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const nf=(n,d=0)=>Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:d});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsonClone=o=>JSON.parse(JSON.stringify(o));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const nowMs=()=>performance.now();
+const DAY_MS=120000, NIGHT_MS=120000, SAVE_KEY='cosmolab_hub_v2';
+const roles=['Научный руководитель','Инженер систем','Оператор связи','Руководитель проекта'];
+
+const SC={
+ earth:{name:'Орбитальный эколог',icon:'🌍',tag:'Наблюдение Земли',body:'Земля',budget:240,goal:75,txGoal:4,days:12,minAlt:400,maxAlt:1000,defaultAlt:550,ideal:550,reqLink:1.5,reqProp:25,sun:.67,dark:3,minReserve:1.6,linkFactor:1,rocketKey:'leo',hazard:.19,orbitCost:.013,desc:'Снимки поверхности, анализ лесов и облаков.'},
+ moon:{name:'Лунный картограф',icon:'🌕',tag:'Исследование Луны',body:'Луна',budget:540,goal:95,txGoal:3,days:13,minAlt:100,maxAlt:500,defaultAlt:150,ideal:150,reqLink:.48,reqProp:85,sun:.72,dark:5,minReserve:2,linkFactor:.22,rocketKey:'lunar',hazard:.27,orbitCost:.021,desc:'Съёмка и спектральная карта лунной поверхности.'},
+ mars:{name:'Марсианская разведка',icon:'🔴',tag:'Дальняя связь',body:'Марс',budget:890,goal:110,txGoal:1.7,days:15,minAlt:200,maxAlt:800,defaultAlt:350,ideal:350,reqLink:.11,reqProp:140,sun:.55,dark:7,minReserve:2.5,linkFactor:.035,rocketKey:'mars',hazard:.35,orbitCost:.024,desc:'Погода и геология Марса; сложная передача данных.'}
+};
+const PARTS={
+ bus:{label:'Корпус и электроника',help:'Основная платформа, от которой зависит надёжность.',options:[{n:'Компактная платформа',m:120,c:25,p:20,rel:.90},{n:'Стабильная платформа',m:220,c:48,p:28,rel:.95},{n:'Защищённая платформа',m:360,c:85,p:38,rel:.985}]},
+ payload:{label:'Научные приборы',help:'Приборы определяют скорость получения научных результатов.',options:{earth:[{n:'Оптическая камера',m:80,c:40,p:35,sci:15,data:1.2},{n:'Радиолокатор',m:145,c:80,p:75,sci:24,data:2.4},{n:'Спектрометр',m:110,c:70,p:45,sci:20,data:1.4}],moon:[{n:'Камера поверхности',m:140,c:100,p:60,sci:18,data:1.0},{n:'Лунный спектрометр',m:120,c:95,p:55,sci:21,data:.8},{n:'Георадар',m:210,c:145,p:95,sci:27,data:1.2}],mars:[{n:'Марсианский спектрометр',m:140,c:140,p:50,sci:23,data:.8},{n:'Подповерхностный радар',m:190,c:180,p:70,sci:30,data:1.2},{n:'Климатическая лаборатория',m:230,c:210,p:95,sci:33,data:1.5}]}},
+ solar:{label:'Солнечные панели',help:'Мощность уменьшается в тени и вдали от Солнца.',options:[{n:'Малые · 210 Вт',m:60,c:22,gen:210},{n:'Развёрнутые · 380 Вт',m:110,c:55,gen:380},{n:'Высокоэффективные · 650 Вт',m:185,c:105,gen:650}]},
+ battery:{label:'Аккумулятор',help:'Поддерживает работу во время отсутствия солнечного света.',options:[{n:'Стандарт · 500 Вт·ч',m:55,c:18,capacity:500},{n:'Усиленный · 1200 Вт·ч',m:100,c:36,capacity:1200},{n:'Большой · 2400 Вт·ч',m:170,c:60,capacity:2400}]},
+ antenna:{label:'Антенна и связь',help:'Чем дальше цель, тем ниже эффективная скорость передачи.',options:[{n:'Компактная · 2,2 Мбит/с',m:20,c:10,p:12,link:2.2},{n:'Параболическая · 8 Мбит/с',m:60,c:40,p:30,link:8},{n:'Дальняя связь · 22 Мбит/с',m:130,c:90,p:65,link:22}]},
+ prop:{label:'Двигатель и запас топлива',help:'Определяет доступные коррекции траектории.',options:[{n:'Ионная система',m:55,c:35,p:45,delta:35},{n:'Химический двигатель',m:130,c:50,p:15,delta:105},{n:'Гибридная установка',m:210,c:90,p:25,delta:175}]},
+ shield:{label:'Защита аппарата',help:'Снижает потери целостности от опасных событий.',options:[{n:'Без дополнительной защиты',m:0,c:0,shield:0},{n:'Лёгкая защита',m:40,c:16,shield:.3},{n:'Усиленная защита',m:105,c:50,shield:.65}]},
+ rocket:{label:'Ракета-носитель',help:'Грузоподъёмность уменьшается для более далёкой цели.',options:[{n:'«Стриж» — лёгкая',c:36,leo:900,lunar:320,mars:150},{n:'«Горизонт» — средняя',c:95,leo:2200,lunar:1000,mars:500},{n:'«Атлас» — тяжёлая',c:200,leo:4500,lunar:2400,mars:1200}]}
+};
+const TECH={
+ solar:{title:'Солнечные панели',icon:'☀️',cost:12,days:2,desc:'Выработка энергии +17% за уровень.'},
+ battery:{title:'Аккумуляторы',icon:'🔋',cost:10,days:2,desc:'Ёмкость +20% за уровень.'},
+ antenna:{title:'Антенны и связь',icon:'📡',cost:15,days:3,desc:'Скорость связи +24% за уровень.'},
+ prop:{title:'Двигатель и топливо',icon:'🚀',cost:18,days:3,desc:'Запас манёвров +18% за уровень.'},
+ shield:{title:'Радиационная защита',icon:'🛡️',cost:13,days:2,desc:'Защита +0,12 за уровень.'},
+ rocket:{title:'Ракеты-носители',icon:'🧰',cost:20,days:4,desc:'Грузоподъёмность +14% за уровень.'},
+ payload:{title:'Научные приборы',icon:'🔬',cost:16,days:3,desc:'Научная производительность +16% за уровень.'},
+ bus:{title:'Системы аппарата',icon:'💻',cost:12,days:2,desc:'Надёжность корпуса +0,008 за уровень.'},
+ crew:{title:'Подготовка экипажа',icon:'👩‍🚀',cost:11,days:2,desc:'Бонус к проверкам D20 и координации.'}
+};
+const GOODS={
+ alloy:{label:'Сплавы',icon:'🧱',qty:10,cost:9,days:2,desc:'Каркас и корпус ракеты'},
+ electronics:{label:'Электроника',icon:'🔌',qty:8,cost:11,days:2,desc:'Бортовые системы и приборы'},
+ fuel:{label:'Топливо',icon:'⛽',qty:12,cost:14,days:3,desc:'Запас топлива и испытания'},
+ food:{label:'Питание',icon:'🥫',qty:8,cost:5,days:2,desc:'Обеспечение команды'}
+};
+const MISSION_EVENTS=[
+ {icon:'☀️',title:'Солнечная вспышка',desc:'Поток частиц повреждает электронику и создаёт помехи.',choices:[{txt:'Защитить аппаратуру',action:'safe',effect:'+3 к целостности, −12 Вт·ч'},{txt:'Продолжить наблюдения',action:'science',effect:'+наука, риск повреждения'}]},
+ {icon:'🪨',title:'Микрометеороид',desc:'Небольшое столкновение угрожает корпусу.',choices:[{txt:'Изолировать повреждение',action:'safe',effect:'+3 к целостности, −12 Вт·ч'},{txt:'Манёвр уклонения',action:'fuel',effect:'−11 топлива, +5 к орбите'}]},
+ {icon:'📡',title:'Помехи на радиолинии',desc:'Ухудшилась видимость наземной станции.',choices:[{txt:'Снизить скорость и дождаться окна',action:'safe',effect:'+3 к целостности, −12 Вт·ч'},{txt:'Усилить передачу',action:'energy',effect:'−80 Вт·ч, +передача'}]},
+ {icon:'🧲',title:'Орбитальное возмущение',desc:'Траектория отклоняется от плановой.',choices:[{txt:'Выполнить коррекцию',action:'fuel',effect:'−11 топлива, +5 к орбите'},{txt:'Сохранить топливо',action:'risk',effect:'−11 к орбите, экономия'}]},
+ {icon:'✨',title:'Неожиданное научное окно',desc:'Уникальная возможность получить дополнительные наблюдения.',choices:[{txt:'Провести измерения',action:'science',effect:'+наука, +данные'},{txt:'Не перегружать аппаратуру',action:'safe',effect:'+3 к целостности, −12 Вт·ч'}]}
+];
+const TRANSIT_EVENTS=[
+ {icon:'☄️',name:'Метеоритный поток',desc:'Впереди камни на пересекающихся траекториях. Нужно защититься или потратить топливо на манёвр.',choices:[{label:'Укрыть аппарат защитными панелями',action:'safe',effect:'бонус защиты'},{label:'Манёвр уклонения',action:'fuel',effect:'бонус двигателя, −12 топлива'}]},
+ {icon:'☀️',name:'Солнечная радиация',desc:'Электроника и батареи под угрозой. Защита поможет пережить поток частиц.',choices:[{label:'Перейти в защищённый режим',action:'safe',effect:'бонус щита'},{label:'Питание на резервный контур',action:'energy',effect:'бонус батареи, −75 Вт·ч'}]},
+ {icon:'📡',name:'Разрыв связи',desc:'Слабый сигнал осложняет контроль траектории. Риск возрастает с удалением от Земли.',choices:[{label:'Перенастроить антенну',action:'energy',effect:'бонус антенны, −75 Вт·ч'},{label:'Действовать по автономному плану',action:'risk',effect:'бонус команды, риск курса'}]},
+ {icon:'⚙️',name:'Отказ системы ориентации',desc:'Корабль теряет точность наведения на цель. Проверьте системы или потратьте топливо.',choices:[{label:'Перезапустить бортовой компьютер',action:'safe',effect:'бонус надёжности'},{label:'Корректировать ориентацию двигателем',action:'fuel',effect:'бонус двигателя, −12 топлива'}]}
+];
+const DIFF={easy:{budget:1.2,goal:.83,hazard:.6,days:2,bonus:-2,label:'Курсант'},normal:{budget:1,goal:1,hazard:1,days:0,bonus:0,label:'Инженер'},hard:{budget:.85,goal:1.25,hazard:1.35,days:-1,bonus:2,label:'Эксперт'}};
+const PREP={earth:3,moon:5,mars:7};
+
+function defaultMembers(n=1){return Array.from({length:n},(_,i)=>({role:i}))}
+function defaultState(){return{
+ scenario:'earth',diff:'normal',alt:550,
+ parts:{bus:0,payload:0,solar:0,battery:0,antenna:0,prop:0,shield:1,rocket:0},
+ members:defaultMembers(1),
+ base:{day:1,tech:{},jobs:[],stock:{alloy:20,electronics:12,fuel:14,food:10},wallet:280,built:null,completed:0},
+ flight:null,report:null
+}}
+function sanitizeState(d){
+ const s=defaultState();if(!d||typeof d!=='object')return s;
+ if(SC[d.scenario])s.scenario=d.scenario;if(DIFF[d.diff])s.diff=d.diff;
+ const sc=SC[s.scenario];s.alt=clamp(Number(d.alt)||sc.defaultAlt,sc.minAlt,sc.maxAlt);
+ if(d.parts&&typeof d.parts==='object')for(const key of Object.keys(PARTS)){const opts=PARTS[key].options;const len=(Array.isArray(opts)?opts:opts[s.scenario]).length;const idx=Number(d.parts[key]);if(Number.isInteger(idx)&&idx>=0&&idx<len)s.parts[key]=idx}
+ if(Array.isArray(d.members)&&d.members.length)s.members=Array.from({length:clamp(d.members.length,1,4)},(_,i)=>({role:i}));
+ const b=d.base&&typeof d.base==='object'?d.base:{};s.base.day=Math.max(1,Math.round(Number(b.day)||1));s.base.wallet=Math.max(0,Math.round(Number.isFinite(Number(b.wallet))?Number(b.wallet):280));
+ s.base.completed=Math.max(0,Math.round(Number(b.completed)||0));
+ for(const k of Object.keys(TECH))s.base.tech[k]=clamp(Math.round(Number(b.tech?.[k])||0),0,2);
+ for(const k of Object.keys(GOODS))s.base.stock[k]=clamp(Math.round(Number(b.stock?.[k])||0),0,500);
+ if(Array.isArray(b.jobs))s.base.jobs=b.jobs.filter(j=>j&&['research','order','build'].includes(j.type)&&Number.isFinite(Number(j.end))).slice(0,30).map(j=>({type:j.type,key:String(j.key||''),end:Math.round(Number(j.end)),start:Math.round(Number(j.start)||s.base.day),qty:Math.round(Number(j.qty)||0),signature:typeof j.signature==='string'?j.signature:'',materials:j.materials&&typeof j.materials==='object'?j.materials:{}})).filter(j=>j.type==='build'||j.type==='research'&&TECH[j.key]||j.type==='order'&&GOODS[j.key]);
+ s.base.built=typeof b.built==='string'?b.built:null;
+ if(d.flight&&typeof d.flight==='object'&&Number.isFinite(Number(d.flight.day)))s.flight=jsonClone(d.flight);
+ if(d.report&&typeof d.report==='object')s.report=jsonClone(d.report);
+ return s;
+}
+function loadState(){try{const raw=localStorage.getItem(SAVE_KEY);return raw?sanitizeState(JSON.parse(raw)):defaultState()}catch(e){return defaultState()}}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(current))}catch(e){}}
+let current=loadState();
+let cycle={phase:'day',elapsed:0,night:0,dawn:0};
+let scene='hub',activeModal=null,lastHud=0,lastSave=0,toastTimer=null,diceTimer=null;
+let hoverRoom=null,clock=0;
+const view={scale:1,ox:0,oy:0,w:0,h:0,dpr:1};
+const fx={science:0,storage:0,build:0,launch:0,arrival:0,dawn:0};
+const hubSprite={x:560,y:540,route:[],onArrival:null,facing:1,walking:false,phase:0};
+const moveKeys={};
+const MODAL_META={command:{title:'Центр управления',icon:'🖥️',kicker:'NASA · КОМАНДНЫЙ ПУЛЬТ',theme:'command'},science:{title:'Научная лаборатория',icon:'🔬',kicker:'NASA · ИССЛЕДОВАНИЯ',theme:'science'},storage:{title:'Склад материалов',icon:'📦',kicker:'NASA · ЛОГИСТИКА',theme:'storage'},design:{title:'Проектировочная',icon:'🛠️',kicker:'NASA · СБОРОЧНЫЙ АНГАР',theme:'design'},event:{title:'Внештатная ситуация',icon:'⚠️',kicker:'СИСТЕМА ОПОВЕЩЕНИЯ',theme:'event'},result:{title:'Итоги миссии',icon:'🏆',kicker:'ЦЕНТР УПРАВЛЕНИЯ',theme:'result'}};
+
+function part(key){const options=PARTS[key].options;const p={...(Array.isArray(options)?options:options[current.scenario])[current.parts[key]]};const lvl=Number(current.base.tech?.[key]||0);if(!lvl)return p;
+ if(key==='solar')p.gen=Math.round(p.gen*(1+.17*lvl));if(key==='battery')p.capacity=Math.round(p.capacity*(1+.20*lvl));if(key==='antenna')p.link=Number((p.link*(1+.24*lvl)).toFixed(3));if(key==='prop')p.delta=Math.round(p.delta*(1+.18*lvl));if(key==='shield')p.shield=Math.min(.90,p.shield+.12*lvl);if(key==='payload')p.sci=Math.round(p.sci*(1+.16*lvl));if(key==='bus')p.rel=Math.min(.995,p.rel+.008*lvl);if(key==='rocket')for(const k of ['leo','lunar','mars'])p[k]=Math.round(p[k]*(1+.14*lvl));return p}
+function diffVal(){return DIFF[current.diff]}
+function teamValue(){const n=current.members.length;return{coordination:Math.min(100,66+n*8),bonus:n-1}}
+function calculate(){
+ const sc=SC[current.scenario],df=diffVal(),p={};for(const key of Object.keys(PARTS))p[key]=part(key);
+ const mass=Object.entries(p).reduce((a,[k,v])=>a+(k==='rocket'?0:v.m||0),0);
+ const cost=Object.values(p).reduce((a,v)=>a+v.c,0)+Math.max(0,current.members.length-1)*5;
+ const consumption=p.bus.p+p.payload.p+p.antenna.p+p.prop.p;
+ const solar=p.solar.gen*sc.sun,margin=solar-consumption,availableBattery=p.battery.capacity/Math.max(1,consumption);
+ const link=p.antenna.link*sc.linkFactor;
+ const altitudePenalty=Math.abs(current.alt-sc.ideal)/Math.max(sc.ideal,100);
+ const neededProp=sc.reqProp*(1+altitudePenalty*.20);
+ const rocketCapacity=p.rocket[sc.rocketKey],limit=sc.budget*df.budget;
+ const requirements=[
+  {key:'mass',name:'Масса / грузоподъёмность',ok:mass<=rocketCapacity,detail:`${nf(mass)} / ${nf(rocketCapacity)} кг`},
+  {key:'budget',name:'Бюджет проекта',ok:cost<=limit,detail:`${nf(cost)} / ${nf(limit)} млн`},
+  {key:'power',name:'Энергобаланс',ok:margin>=0,detail:`${nf(solar)} − ${nf(consumption)} Вт`},
+  {key:'battery',name:'Автономность',ok:availableBattery>=sc.minReserve,detail:`${nf(availableBattery,1)} / ${nf(sc.minReserve,1)} ч`},
+  {key:'link',name:'Скорость связи',ok:link>=sc.reqLink,detail:`${nf(link,2)} / ${nf(sc.reqLink,2)} Мбит/с`},
+  {key:'prop',name:'Коррекция траектории',ok:p.prop.delta>=neededProp,detail:`${nf(p.prop.delta)} / ${nf(neededProp)} ед.`}
+ ];
+ const reliability=Math.max(.52,Math.min(.99,p.bus.rel+p.shield.shield*.10-altitudePenalty*.016));
+ return{sc,df,p,mass,cost,consumption,solar,margin,availableBattery,link,neededProp,rocketCapacity,limit,requirements,reliability,altitudePenalty,ready:requirements.every(r=>r.ok),money:current.base.wallet};
+}
+function designSignature(){return JSON.stringify({mission:current.scenario,parts:current.parts,tech:Object.fromEntries(Object.entries(current.base.tech||{}).filter(([k])=>k!=='crew'))})}
+function buildMaterials(){const ri=current.parts.rocket||0,mi=['earth','moon','mars'].indexOf(current.scenario);return{alloy:12+ri*4,electronics:6+current.parts.payload*2+mi,fuel:7+mi*5,food:Math.max(2,current.members.length*2)}}
+function workingBuild(){return current.base.jobs.find(j=>j.type==='build')}
+function researchQueued(key){return current.base.jobs.some(j=>j.type==='research'&&j.key===key)}
+function invalidateBuild(){
+ const b=current.base;let changed=false;
+ if(b.built){b.built=null;changed=true}
+ const job=workingBuild();
+ if(job){for(const[k,n]of Object.entries(job.materials||{}))if(k in b.stock)b.stock[k]=Math.min(500,b.stock[k]+(Number(n)||0));b.jobs=b.jobs.filter(j=>j!==job);changed=true}
+ return changed;
+}
+function refreshHudNumbers(){
+ $('hudDays').textContent=current.base.day;
+ $('hudMoney').textContent=nf(Math.round(current.base.wallet));
+ $('dayChip').classList.toggle('night',cycle.phase==='night');
+}
+function updateDayRing(){
+ const len=cycle.phase==='day'?DAY_MS:NIGHT_MS,p=clamp(cycle.elapsed/len,0,1),C=94.25;
+ $('dayBar').style.strokeDashoffset=String(C*(1-p));
+}
+function showToastIcon(icon){const el=$('toastIcon');el.textContent=icon;el.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('on'),1400)}
+function bump(el){el&&el.animate?.([{transform:'scale(1)'},{transform:'scale(1.14)'},{transform:'scale(1)'}],{duration:320,easing:'ease-out'})}
+
+function startResearch(key){
+ const t=TECH[key];if(!t)return;const b=current.base,level=b.tech[key]||0;
+ if(level>=2||researchQueued(key))return;
+ const cost=t.cost+level*7;
+ if(b.wallet<cost){showToastIcon('💸');renderModal();return}
+ b.wallet-=cost;b.jobs.push({type:'research',key,end:b.day+t.days+level,start:b.day,qty:1});
+ save();refreshHudNumbers();showToastIcon('🔬');renderModal();
+}
+function orderSupply(key){
+ const g=GOODS[key];if(!g)return;const b=current.base;
+ if(b.wallet<g.cost){showToastIcon('💸');renderModal();return}
+ b.wallet-=g.cost;b.jobs.push({type:'order',key,end:b.day+g.days,start:b.day,qty:g.qty});
+ save();refreshHudNumbers();showToastIcon('📦');renderModal();
+}
+function startBuild(){
+ const b=current.base;if(workingBuild()||b.built===designSignature())return;
+ const mat=buildMaterials(),lacking=Object.entries(mat).filter(([k,n])=>b.stock[k]<n);
+ if(lacking.length){showToastIcon('⛔');renderModal();return}
+ for(const[k,n]of Object.entries(mat))b.stock[k]-=n;
+ const duration=2+current.parts.rocket;
+ b.jobs.push({type:'build',key:'rocket',end:b.day+duration,start:b.day,signature:designSignature(),materials:mat});
+ save();showToastIcon('🛠️');renderModal();
+}
+function completeJobs(){
+ const b=current.base;const done=b.jobs.filter(j=>j.end<=b.day);b.jobs=b.jobs.filter(j=>j.end>b.day);
+ for(const j of done){
+  if(j.type==='research'){
+   b.tech[j.key]=Math.min(2,(b.tech[j.key]||0)+1);
+   if(j.key!=='crew')invalidateBuild();
+   b.completed++;fx.science=nowMs();showToastIcon('✅');
+  }
+  if(j.type==='order'){b.stock[j.key]=Math.min(500,b.stock[j.key]+j.qty);fx.storage=nowMs();showToastIcon('📦')}
+  if(j.type==='build'){
+   if(j.signature===designSignature()){b.built=j.signature;fx.build=nowMs();showToastIcon('🚀')}
+   else{b.completed++;}
+  }
+ }
+}
+function dropPendingTransit(){
+ const f=current.flight;if(!f||f.over||f.phase!=='transit'||f.event)return;
+ const t=f.transit;t.day=Math.min(t.total,t.day+1);f.fuel=Math.max(0,f.fuel-2);f.battery=Math.max(0,f.battery-8);
+ if(t.day>=t.total){arriveDestination();return}
+ const chance=clamp(SC[f.design.scenario].hazard*diffVal().hazard+.18,.2,.58);
+ if(Math.random()<chance){f.event={kind:'transit',type:Math.floor(Math.random()*TRANSIT_EVENTS.length)};fx.launch=nowMs()}
+}
+function advanceDay(){
+ const b=current.base;b.day++;completeJobs();
+ const f=current.flight;
+ if(f&&!f.over){
+  if(f.phase==='transit'&&!f.event)dropPendingTransit();
+  else if(f.phase==='mission'&&!f.event&&Math.random()<clamp(SC[f.design.scenario].hazard*.35,.08,.25))f.event={kind:'mission',type:Math.floor(Math.random()*MISSION_EVENTS.length)};
+ }
+ fx.dawn=nowMs();cycle.dawn=nowMs();
+ save();refreshHudNumbers();bump($('hudDays'));
+ if(f&&f.event&&scene==='space'&&!activeModal)openModal('event');
+ else if(activeModal&&activeModal.kind!=='event')renderModal();
+ else if(activeModal&&activeModal.kind==='event'&&!activeModal.data?.result&&f?.event){/* keep current event window */}
+}
+function tickCycle(dt){
+ const len=cycle.phase==='day'?DAY_MS:NIGHT_MS;cycle.elapsed+=dt;
+ if(cycle.elapsed>=len){cycle.elapsed-=len;if(cycle.phase==='day')cycle.phase='night';else{cycle.phase='day';advanceDay()}}
+ const target=cycle.phase==='night'?1:0;cycle.night+=(target-cycle.night)*(1-Math.exp(-dt/520));
+}
+function selectMission(key){
+ if(!SC[key]||current.flight&&!current.flight.over)return;
+ if(current.scenario===key)return;
+ current.scenario=key;current.alt=SC[key].defaultAlt;
+ const presets={
+  earth:{bus:0,payload:0,solar:0,battery:0,antenna:0,prop:0,shield:1,rocket:0},
+  moon:{bus:1,payload:0,solar:1,battery:1,antenna:1,prop:1,shield:1,rocket:1},
+  mars:{bus:1,payload:0,solar:2,battery:2,antenna:1,prop:2,shield:2,rocket:2}
+ };
+ current.parts={...(presets[key]||presets.earth)};
+ invalidateBuild();save();refreshHudNumbers();showToastIcon(SC[key].icon);renderModal();
+}
+function selectDifficulty(key){if(!DIFF[key]||current.flight&&!current.flight.over)return;current.diff=key;save();renderModal();}
+function setCrew(n){if(current.flight&&!current.flight.over)return;current.members=defaultMembers(clamp(n,1,4));save();refreshHudNumbers();renderModal();}
+function canLaunchData(){
+ const v=calculate(),b=current.base,f=current.flight;
+ const built=b.built===designSignature(),crew=current.members.length>0,budget=v.cost<=v.limit;
+ const reasons=[];
+ if(!built)reasons.push(b.jobs.some(j=>j.type==='build')?'Ракета ещё собирается':'Ракета не построена');
+ if(!crew)reasons.push('Не собрана команда');
+ if(!budget)reasons.push('Проект выходит за бюджет');
+ if(!v.ready)reasons.push('Не выполнены инженерные ограничения');
+ if(f&&!f.over)reasons.push('Миссия уже выполняется');
+ return{ok:built&&crew&&budget&&v.ready&&!(f&&!f.over),v,built,crew,budget,reasons};
+}
+function launchMission(){
+ const d=canLaunchData();if(!d.ok){showToastIcon('⛔');renderModal();return}
+ const v=d.v,fdata=teamValue(),f=current.flight;
+ const fstate={
+  phase:'transit',transit:{day:0,total:PREP[current.scenario]||3},day:0,maxDays:0,
+  science:0,transmitted:0,buffer:0,battery:Math.round(v.p.battery.capacity*.82),
+  batteryMax:v.p.battery.capacity,health:Math.round(v.reliability*100),orbit:100,fuel:v.p.prop.delta,
+  over:false,win:false,event:null,lastNote:'',coordination:fdata.coordination,reward:0,
+  design:jsonClone({scenario:current.scenario,diff:current.diff,alt:current.alt,parts:current.parts}),
+  snapshot:{sci:v.p.payload.sci,data:v.p.payload.data,link:v.link,shield:v.p.shield.shield,consumption:v.consumption,solar:v.solar,busRel:v.p.bus.rel,propDelta:v.p.prop.delta,capacity:v.p.battery.capacity,payloadName:v.p.payload.n},
+  launchedAt:Date.now()
+ };
+ current.flight=fstate;current.report=null;current.base.built=null;
+ fx.launch=nowMs();save();refreshHudNumbers();closeModal();scene='space';updateSceneNav();flashScreen();showToastIcon('🚀');
+}
+function arriveDestination(){
+ const f=current.flight;if(!f||f.over)return;
+ f.transit.day=f.transit.total;f.phase='mission';f.day=0;f.maxDays=(SC[f.design.scenario]?.days||12)+(DIFF[f.design.diff]?.days||0);
+ f.lastNote='Аппарат вышел на рабочую орбиту.';fx.arrival=nowMs();showToastIcon('🛰️');save();
+ if(activeModal)renderModal();
+ setTimeout(()=>{if(current.flight&&current.flight.phase==='mission'&&!current.flight.over)openModal('command')},900);
+}
+function eventDC(){
+ const base={earth:9,moon:12,mars:15}[current.scenario]||12;
+ return base+(current.diff==='hard'?2:current.diff==='easy'?-2:0);
+}
+function eventBonus(ev,action){
+ const f=current.flight,snap=f?.snapshot,c=calculate(),p=c.p;
+ let bonus=current.members.length-1+(current.base.tech?.crew||0)*2;
+ if(action==='safe')bonus+=Math.round((snap?.shield??p.shield.shield)*7)+((snap?.busRel??p.bus.rel)>.96?2:1);
+ if(action==='fuel')bonus+=Math.min(5,Math.floor((snap?.propDelta??p.prop.delta)/40));
+ if(action==='energy')bonus+=((snap?.capacity??p.battery.capacity)>=1200?3:1)+((snap?.link??c.link)>=8?2:0);
+ if(action==='science')bonus+=Math.min(4,Math.floor((snap?.sci??p.payload.sci)/9));
+ if(action==='risk')bonus+=Math.round(teamValue().coordination/40);
+ return Math.max(0,bonus);
+}
+function randomMissionEvent(){const f=current.flight;if(!f||f.over||f.event)return;const sc=SC[f.design.scenario];if(Math.random()<clamp(sc.hazard*diffVal().hazard,.08,.42))f.event={kind:'mission',type:Math.floor(Math.random()*MISSION_EVENTS.length)}}
+function missionAction(action){
+ const f=current.flight;if(!f||f.over||f.phase!=='mission'||f.event)return;
+ const sc=SC[f.design.scenario],df=DIFF[f.design.diff]||DIFF.normal,snap=f.snapshot;
+ if(action==='finish'){
+  const goal=sc.goal*(df.goal||1);
+  if(f.science>=goal&&f.transmitted>=sc.txGoal&&f.health>=30&&f.orbit>=25)finishFlight('Миссия завершена досрочно');
+  else{f.lastNote='Досрочное завершение доступно после выполнения научной и коммуникационной целей.';renderModal()}
+  return;
+ }
+ const capacity=f.batteryMax,efficiency=Math.max(.5,1-calculate().altitudePenalty*.15),powerPenalty=calculate().margin<0?1.2:1;
+ const dayCost=Math.max(14,Math.round((snap?.consumption||calculate().consumption)*.45*powerPenalty));
+ let note='';
+ if(action==='observe'){
+  if(f.battery<dayCost){f.lastNote='Недостаточно заряда. Нужна подзарядка.';showToastIcon('🔋');renderModal();return}
+  const sci=Math.max(1,Math.round((snap?.sci||15)*efficiency*(f.health/100)*(1+.08*(current.members.length-1))));
+  f.science+=sci;const data=(snap?.data||1.2)*efficiency;f.buffer+=data;f.battery-=dayCost;f.health=Math.max(0,f.health-1);
+  note=`Наблюдение: +${nf(sci)} науки, +${nf(data,2)} ГБ данных.`;
+ }
+ if(action==='transmit'){
+  if(f.battery<Math.max(10,dayCost*.65)){f.lastNote='Мало энергии для передачи.';showToastIcon('🔋');renderModal();return}
+  const sent=Math.min(f.buffer,(snap?.link||2.2)*(sc.body==='Марс'?1.7:sc.body==='Луна'?2.4:2.8));
+  f.transmitted+=sent;f.buffer=Math.max(0,f.buffer-sent);f.battery-=Math.round(dayCost*.65);
+  note=`Передача: ${nf(sent,2)} ГБ на Землю. На борту ${nf(f.buffer,2)} ГБ.`;
+ }
+ if(action==='charge'){
+  const gain=Math.max(32,Math.round(((snap?.solar||140)-(snap?.consumption||120)*.18)*2.15));
+  const before=f.battery;f.battery=Math.min(capacity,f.battery+gain);f.health=Math.min(100,f.health+1);
+  note=`Подзарядка: +${nf(f.battery-before)} Вт·ч.`;
+ }
+ if(action==='correct'){
+  if(f.fuel<9){f.lastNote='Недостаточно топлива для коррекции.';showToastIcon('⛽');renderModal();return}
+  f.fuel-=9;f.orbit=Math.min(100,f.orbit+24);f.battery=Math.max(0,f.battery-16);
+  note='Коррекция орбиты: устойчивость +24.';
+ }
+ f.day++;f.lastNote=note;
+ const wear=Math.max(1,Math.round(2.2+calculate().altitudePenalty*3+(f.design.diff==='hard'?1:0)));
+ f.orbit=Math.max(0,f.orbit-wear);
+ if(calculate().margin<0){f.battery=Math.max(0,f.battery-Math.round(Math.abs(calculate().margin)*.30))}
+ if(f.battery===0)f.health=Math.max(0,f.health-8);
+ if(f.orbit<40)f.health=Math.max(0,f.health-3);
+ randomMissionEvent();
+ if(!checkEnd()){save();refreshHudNumbers();renderModal();}
+}
+function checkEnd(){
+ const f=current.flight;if(!f||f.over)return true;
+ if(f.day>=f.maxDays){finishFlight('Время миссии истекло');return true}
+ if(f.health<=0){finishFlight('Аппарат потерян');return true}
+ if(f.orbit<=0){finishFlight('Орбита потеряна');return true}
+ return false;
+}
+function finishFlight(reason){
+ const f=current.flight;if(!f||f.over)return;f.over=true;f.phase='done';f.event=null;
+ const sc=SC[f.design.scenario],df=DIFF[f.design.diff]||DIFF.normal,goal=sc.goal*df.goal;
+ const scienceRatio=Math.min(1,f.science/goal),txRatio=Math.min(1,f.transmitted/sc.txGoal),healthRatio=Math.min(1,f.health/70),orbitRatio=Math.min(1,f.orbit/35);
+ f.win=scienceRatio>=1&&txRatio>=1&&f.health>=30&&f.orbit>=25;
+ const points=Math.max(0,Math.min(100,Math.round(scienceRatio*30+txRatio*25+healthRatio*13+orbitRatio*10+(f.coordination/100)*7+(f.win?15:0))));
+ f.score=points;f.reason=reason;
+ const why=[];
+ if(f.science<goal)why.push(`Наука: ${nf(f.science)} из ${nf(goal)}.`);
+ if(f.transmitted<sc.txGoal)why.push(`Передано: ${nf(f.transmitted,2)} из ${nf(sc.txGoal,2)} ГБ.`);
+ if(f.health<30)why.push('Аппарат получил слишком сильные повреждения.');
+ if(f.orbit<25)why.push('Орбита потеряла устойчивость.');
+ if(!why.length)why.push('Все ключевые цели достигнуты. Баланс науки, связи и безопасности выдержан.');
+ const reward=f.win?Math.round(60+points*.8):15;f.reward=reward;current.base.wallet+=reward;
+ current.report={scenario:f.design.scenario,difficulty:f.design.diff,score:points,win:f.win,day:f.day,days:f.maxDays,science:f.science,scienceGoal:goal,transmitted:Number(f.transmitted.toFixed(2)),dataGoal:sc.txGoal,battery:Math.round(f.battery),health:Math.round(f.health),orbit:Math.round(f.orbit),fuel:Math.round(f.fuel),coordination:f.coordination,reward,reason,why,design:jsonClone(f.design)};
+ save();refreshHudNumbers();
+ if(activeModal&&activeModal.kind==='event'){activeModal.data=activeModal.data||{};activeModal.data.pendingResult=true;renderModal()}
+ else if(activeModal&&activeModal.kind==='result')renderModal();
+ else setTimeout(()=>openModal('result'),420);
+}
+function resolveEvent(choiceIndex){
+ const f=current.flight;if(!f||!f.event)return;
+ const kind=f.event.kind,ev=kind==='transit'?TRANSIT_EVENTS[f.event.type]:MISSION_EVENTS[f.event.type],choice=ev.choices[choiceIndex];if(!choice)return;
+ const action=choice.action,bonus=eventBonus(ev,action),threshold=eventDC()+(action==='risk'?1:0),roll=1+Math.floor(Math.random()*20),success=roll+bonus>=threshold;
+ const snap=f.snapshot,shield=snap?.shield??calculate().p.shield.shield;let note='';
+ if(kind==='transit'){
+  if(action==='fuel'){f.fuel=Math.max(0,f.fuel-12);note+='Расход топлива: −12. '}
+  if(action==='energy'){f.battery=Math.max(0,f.battery-75);note+='Питание: −75 Вт·ч. '}
+  if(success){f.health=Math.min(100,f.health+Math.round(shield*2));note+='Корабль продолжает полёт.'}
+  else{const damage=Math.round((f.design.scenario==='mars'?24:f.design.scenario==='moon'?19:14)*(1-shield*.55));f.health=Math.max(0,f.health-damage);f.orbit=Math.max(0,f.orbit-8);note+=`Повреждение: −${damage}% целостности, −8% орбиты.`}
+ }else{
+  if(action==='safe'){f.health=Math.min(100,f.health+3);f.battery=Math.max(0,f.battery-12);note='Системы защищены; небольшой расход энергии. '}
+  if(action==='science'){f.science+=Math.round((snap?.sci||15)*.55);f.buffer+=(snap?.data||1.2)*.3;f.health=Math.max(0,f.health-Math.round(5*(1-shield)));f.battery=Math.max(0,f.battery-30);note='Дополнительная наука ценой энергии и риска. '}
+  if(action==='fuel'){f.fuel=Math.max(0,f.fuel-11);f.orbit=Math.min(100,f.orbit+5);note='Орбита скорректирована, топливо израсходовано. '}
+  if(action==='energy'){f.battery=Math.max(0,f.battery-80);const sent=Math.min(f.buffer,.4);f.transmitted+=sent;f.buffer=Math.max(0,f.buffer-sent);note='Связь усилена, заряд снижен. '}
+  if(action==='risk'){f.orbit=Math.max(0,f.orbit-11);note='Топливо сэкономлено, орбита менее стабильна. '}
+  if(!success){const damage=Math.round((f.design.diff==='hard'?17:10)*(1-shield*.5));f.health=Math.max(0,f.health-damage);f.orbit=Math.max(0,f.orbit-6);note+='Проверка не пройдена: повреждение и отклонение орбиты.'}
+  else note+='Проверка успешна.';
+ }
+ f.battery=clamp(f.battery,0,f.batteryMax);f.health=clamp(f.health,0,100);f.orbit=Math.max(0,f.orbit);f.fuel=Math.max(0,f.fuel);
+ f.event=null;f.lastNote=note;
+ activeModal={kind:'event',data:{result:{kind,name:ev.name||ev.title,icon:ev.icon,roll,bonus,threshold,success,note,choice:choice.txt||choice.label}}};
+ if(f.health<=0)finishFlight('Корабль уничтожен');else save();
+ if(f.battery===0)showToastIcon('🔋');
+ renderModal();refreshHudNumbers();
+}
+function clearForNewMission(){
+ if(current.flight&&!current.flight.over)return;
+ current.flight=null;current.report=null;scene='hub';updateSceneNav();closeModal();save();showToastIcon('🛠️');setTimeout(()=>openModal('command'),120);
+}
+function resetGame(){
+ if(!confirm('Начать новую кампанию? Дни, деньги, склад и исследования будут сброшены.'))return;
+ current=defaultState();cycle={phase:'day',elapsed:0,night:0,dawn:0};scene='hub';hubSprite.x=560;hubSprite.y=540;hubSprite.route=[];closeModal();updateSceneNav();save();refreshHudNumbers();showToastIcon('↻');
+}
+
+/* ---------- modal system ---------- */
+function openModal(kind,data=null){
+ if(!MODAL_META[kind])return;
+ activeModal={kind,data:data||{}};
+ const meta=MODAL_META[kind];
+ $('modalIcon').textContent=meta.icon;$('modalKicker').textContent=meta.kicker;$('modalTitle').textContent=meta.title;
+ $('modalCard').dataset.theme=meta.theme;
+ $('modalRoot').hidden=false;document.body.classList.add('modal-open');renderModal();
+}
+function closeModal(){
+ if(!activeModal)return;
+ activeModal=null;clearInterval(diceTimer);$('modalRoot').hidden=true;document.body.classList.remove('modal-open');save();
+}
+function renderModal(){
+ if(!activeModal)return;
+ const meta=MODAL_META[activeModal.kind];if(meta){$('modalCard').dataset.theme=meta.theme;$('modalIcon').textContent=meta.icon;$('modalKicker').textContent=meta.kicker;$('modalTitle').textContent=meta.title}
+ const body=$('modalBody'),scroll=body.scrollTop;
+ let html='';
+ if(activeModal.kind==='command')html=commandHTML();
+ else if(activeModal.kind==='science')html=scienceHTML();
+ else if(activeModal.kind==='storage')html=storageHTML();
+ else if(activeModal.kind==='design')html=designHTML();
+ else if(activeModal.kind==='event')html=eventHTML();
+ else if(activeModal.kind==='result')html=resultHTML();
+ body.innerHTML=html;body.scrollTop=scroll;
+ if(activeModal.kind==='design'){drawDesignPreview();}
+ if(activeModal.kind==='event'&&activeModal.data?.result){startDice(activeModal.data.result.roll)}
+}
+function startDice(final){
+ clearInterval(diceTimer);const el=$('diceNum');if(!el){return}let n=0;
+ diceTimer=setInterval(()=>{n++;el.textContent=String(1+Math.floor(Math.random()*20));if(n>=11){clearInterval(diceTimer);el.textContent=String(final);el.classList.add('settle')}},55);
+}
+function flashScreen(){const el=$('flash');el.classList.remove('go');void el.offsetWidth;el.classList.add('go')}
+function updateSceneNav(){$('sceneNav').hidden=scene!=='space'}
+function orbClass(key){return key==='moon'?'moon':key==='mars'?'mars':'earth'}
+function buildStatusText(){const b=current.base;if(b.built===designSignature())return'Готова';const w=workingBuild();return w?`Сборка · ещё ${Math.max(0,w.end-b.day)} дн.`:'Не построена'}
+function dotsHTML(total,done){
+ let s='';for(let i=0;i<total;i++)s+=`<span class="dayDot ${i<done?'on':''} ${i===done?'now':''}"></span>`;return s;
+}
+function statHTML(label,value,ratio,detail,ok,icon){
+ const cls=ok===false?'bad':ok===true?'':'warn';
+ return `<div class="stat"><div class="top"><span>${icon||''} ${label}</span><b>${ok===false?'!':ok===true?'✓':'·'}</b></div><div class="v">${value}</div><div class="barMini"><span class="${cls}" style="width:${clamp(ratio*100,0,100)}%"></span></div><div class="hintLine" style="margin-top:4px">${detail}</div></div>`;
+}
+function launchSetupHTML(){
+ const v=calculate(),d=canLaunchData(),sc=SC[current.scenario],df=diffVal();
+ const missionCards=Object.entries(SC).map(([key,s])=>`<button class="missionCard ${key===current.scenario?'active':''}" data-act="selectMission" data-key="${key}"><div class="planet ${orbClass(key)}"></div><strong>${s.icon} ${esc(s.name)}</strong><span class="sub">${esc(s.desc)}</span><div class="metaRow"><span class="meta gold">💰 ${nf(s.budget)} млн</span><span class="meta cyan">📅 ${PREP[key]} дн.</span><span class="meta">🎯 ${nf(s.goal)}</span></div></button>`).join('');
+ const diffBtns=Object.entries(DIFF).map(([key,x])=>`<button class="segBtn ${key===current.diff?'active':''}" data-act="diff" data-key="${key}">${x.label}</button>`).join('');
+ const crew=[0,1,2,3].map(i=>`<button class="crewBtn ${i<current.members.length?'active':''}" data-act="crew" data-key="${i+1}" title="${roles[i]}"><span class="av">👩‍🚀</span><span>${i+1}</span></button>`).join('');
+ const reqBad=v.requirements.filter(r=>!r.ok);
+ return `<div class="stack">
+  <div><div class="label">Направление миссии <b>· ${esc(sc.tag)}</b></div><div class="missionGrid">${missionCards}</div></div>
+  <div class="twoCol">
+   <div class="card"><div class="label">Сложность</div><div class="segmented">${diffBtns}</div><div class="hintLine" style="margin-top:8px">Бюджет ×${df.budget.toFixed(2)} · цель ×${df.goal.toFixed(2)} · риск ×${df.hazard.toFixed(2)}</div></div>
+   <div class="card"><div class="label">Экипаж <b>· ${current.members.length} чел.</b></div><div class="crewRow">${crew}</div><div class="hintLine" style="margin-top:8px">${esc(roles.slice(0,current.members.length).join(' · '))}</div></div>
+  </div>
+  <div class="twoCol">
+   <div class="card soft"><div class="label">Готовность к запуску</div><div class="readiness">
+    <div class="check ${d.built?'ok':''}"><span class="dot">${d.built?'✓':'!'}</span>Ракета-носитель<span class="v">${buildStatusText()}</span></div>
+    <div class="check ${d.crew?'ok':''}"><span class="dot">${d.crew?'✓':'!'}</span>Команда на борту<span class="v">${current.members.length} чел.</span></div>
+    <div class="check ${d.budget?'ok':''}"><span class="dot">${d.budget?'✓':'!'}</span>Бюджет проекта<span class="v">${nf(v.cost)} / ${nf(v.limit)}</span></div>
+    <div class="check ${v.ready?'ok':''}"><span class="dot">${v.ready?'✓':'!'}</span>Инженерные системы<span class="v">${v.ready?'Норма':reqBad.length+' огранич.'}</span></div>
+   </div>${reqBad.length?`<div class="hintLine" style="margin-top:8px;color:#d9a278">${reqBad.map(r=>esc(r.name)).join(' · ')}</div>`:''}</div>
+   <div class="card soft" style="display:flex;flex-direction:column;justify-content:space-between;gap:10px">
+    <div><div class="label">Стартовая площадка</div><div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:30px;font-weight:900;letter-spacing:-.04em">${nf(v.cost)}</span><span class="hintLine">млн из ${nf(v.limit)}</span></div>
+    <div class="hintLine">До цели ${PREP[current.scenario]} дн. перелёта · миссия ${sc.days+df.days} дн. · ${df.label}</div></div>
+    <button class="btn primary wide" data-act="launch" ${d.ok?'':'disabled'}>🚀 Запустить миссию</button>
+    ${!d.ok?`<div class="hintLine" style="text-align:center;color:#e1a188">${esc(d.reasons.join(' · '))}</div>`:'<div class="hintLine" style="text-align:center">Все системы допущены к старту</div>'}
+   </div>
+  </div>
+  <div class="actionsRow" style="justify-content:space-between"><span class="hintLine">Деньги на складе и в лаборатории: <b style="color:#ffd48b">${nf(current.base.wallet)}</b></span><button class="btn ghost small" data-act="resetGame">↻ Новая кампания</button></div>
+ </div>`;
+}
+function eventCardHTML(){
+ const f=current.flight;if(!f?.event)return'';
+ const ev=f.event.kind==='transit'?TRANSIT_EVENTS[f.event.type]:MISSION_EVENTS[f.event.type];
+ return `<div class="card alertCard"><div class="label">⚠️ Требуется решение</div><div style="display:flex;align-items:center;gap:9px;margin-bottom:5px"><span style="font-size:22px">${ev.icon}</span><b>${esc(ev.name||ev.title)}</b></div><div class="hintLine" style="margin-bottom:9px">${esc(ev.desc)}</div><button class="btn small" data-act="openEvent">Открыть ситуацию →</button></div>`;
+}
+function flightConsoleHTML(f){
+ const sc=SC[f.design.scenario],df=DIFF[f.design.diff]||DIFF.normal;
+ const hero=`<div class="missionHero"><div class="planet ${orbClass(f.design.scenario)}"></div><div class="grow"><h3>${sc.icon} ${esc(sc.name)}</h3><div class="sub">${esc(sc.body)} · ${df.label} · ${f.phase==='transit'?'Перелёт':'Рабочая орбита'}</div></div><span class="phaseTag">${f.phase==='transit'?'В пути':'Миссия'}</span></div>`;
+ if(f.phase==='transit'){
+  const t=f.transit,p=t.day/Math.max(1,t.total);
+  return `<div class="stack">${hero}${eventCardHTML()}
+   <div class="card"><div class="label">Перелёт <b>· ${t.day} / ${t.total} дн.</b></div><div class="progressBar" style="margin-bottom:9px"><span style="width:${p*100}%"></span></div><div class="dotsLine" style="margin-bottom:10px">${dotsHTML(t.total,t.day)}</div><div class="hintLine">${f.lastNote?esc(f.lastNote):'Автоматический ход перелёта: один день на рассвете. События ждут вашего решения.'}</div></div>
+   <div class="actionsRow"><button class="btn primary" data-act="openSpace">🛰️ Открыть вид перелёта</button><button class="btn" data-act="close">Вернуться в хаб</button></div>
+  </div>`;
+ }
+ const goal=sc.goal*(df.goal||1);
+ const stats=`<div class="statGrid">
+  ${statHTML('Наука',`${nf(f.science)} <small>/ ${nf(goal)}</small>`,f.science/goal,'Научные единицы',f.science>=goal,'🔭')}
+  ${statHTML('Передано',`${nf(f.transmitted,2)} <small>/ ${nf(sc.txGoal,2)}</small>`,f.transmitted/sc.txGoal,'ГБ на Земле',f.transmitted>=sc.txGoal,'📡')}
+  ${statHTML('Батарея',`${nf(f.battery)} <small>Вт·ч</small>`,f.battery/Math.max(1,f.batteryMax),`Максимум ${nf(f.batteryMax)}`,f.battery>f.batteryMax*.2,'🔋')}
+  ${statHTML('Целостность',`${nf(f.health)}<small>%</small>`,f.health/100,'Критично ниже 30%',f.health>=30,'🛡')}
+  ${statHTML('Орбита',`${nf(f.orbit)}<small>%</small>`,f.orbit/100,'Критично ниже 25%',f.orbit>=25,'🧭')}
+  ${statHTML('Топливо',`${nf(f.fuel)} <small>ед.</small>`,f.fuel/Math.max(1,f.snapshot?.propDelta||1),'Коррекция стоит 9',f.fuel>=9,'⛽')}
+ </div>`;
+ const disabled=f.event||f.over?'disabled':'';
+ const canFinish=f.science>=goal&&f.transmitted>=sc.txGoal&&f.health>=30&&f.orbit>=25&&!f.event&&!f.over;
+ return `<div class="stack">${hero}${eventCardHTML()}
+  <div class="card"><div class="label">Состояние миссии <b>· день ${f.day} / ${f.maxDays}</b></div>${stats}<div class="hintLine" style="margin-top:9px">${esc(f.lastNote||'Выберите действие на сутки. На борту '+nf(f.buffer,2)+' ГБ неотправленных данных.')}</div></div>
+  <div class="actionGrid">
+   <button class="actionBtn" data-act="missionAct" data-key="observe" ${disabled}><span class="ico">🔭</span><span><b>Наблюдение</b><small>Наука и данные</small></span></button>
+   <button class="actionBtn" data-act="missionAct" data-key="transmit" ${disabled}><span class="ico">📡</span><span><b>Передача</b><small>Данные на Землю</small></span></button>
+   <button class="actionBtn" data-act="missionAct" data-key="charge" ${disabled}><span class="ico">☀️</span><span><b>Подзарядка</b><small>Восстановить батарею</small></span></button>
+   <button class="actionBtn" data-act="missionAct" data-key="correct" ${disabled}><span class="ico">🧭</span><span><b>Коррекция</b><small>Удержать орбиту</small></span></button>
+  </div>
+  <div class="actionsRow"><button class="btn ${canFinish?'primary':'ghost'} small" data-act="missionAct" data-key="finish" ${canFinish?'':'disabled'}>🏁 Завершить миссию</button><span class="hintLine">${canFinish?'Цели выполнены — можно возвращаться на Землю.':'Досрочное завершение станет доступно после выполнения научной и коммуникационной целей.'}</span></div>
+  <div class="actionsRow"><button class="btn ghost small" data-act="close">Свернуть пульт</button><span class="hintLine">Действие занимает один день миссии.</span></div>
+ </div>`;
+}
+function commandHTML(){
+ const f=current.flight;
+ if(f&&!f.over)return flightConsoleHTML(f);
+ if(f&&f.over&&current.report){
+  const r=current.report;
+  return `<div class="stack"><div class="card resultInline ${r.win?'':'fail'}"><div class="resultHero ${r.win?'':'fail'}" style="padding:14px"><div class="resultIcon" style="width:58px;height:58px;font-size:28px">${r.win?'🏆':'🛑'}</div><div class="grow"><h3 style="font-size:19px">${r.win?'Миссия успешна':'Цели выполнены не полностью'}</h3><p>${esc(r.reason)} · ${r.score}/100</p></div><div class="scoreRing" style="width:60px;height:60px;font-size:19px">${r.score}<small>из 100</small></div></div><div class="actionsRow" style="margin-top:11px"><button class="btn primary" data-act="openResult">Подробный отчёт</button><button class="btn" data-act="newMission">Новая миссия</button></div></div></div>`;
+ }
+ return launchSetupHTML();
+}
+function statBar(v){
+ return`<div class="statGrid">
+  ${statHTML('Масса',`${nf(v.mass)} <small>кг</small>`,v.mass/v.rocketCapacity,`Лимит ${nf(v.rocketCapacity)}`,v.mass<=v.rocketCapacity,'⚖️')}
+  ${statHTML('Бюджет',`${nf(v.cost)} <small>млн</small>`,v.cost/v.limit,`Лимит ${nf(v.limit)}`,v.cost<=v.limit,'💰')}
+  ${statHTML('Мощность',`${nf(v.solar)} <small>Вт</small>`,v.consumption/Math.max(1,v.solar),`Расход ${nf(v.consumption)}`,v.margin>=0,'☀️')}
+  ${statHTML('Автономность',`${nf(v.availableBattery,1)} <small>ч</small>`,v.availableBattery/v.sc.minReserve,`Нужно ${v.sc.minReserve} ч`,v.availableBattery>=v.sc.minReserve,'🔋')}
+  ${statHTML('Связь',`${nf(v.link,2)} <small>Мбит/с</small>`,v.link/v.sc.reqLink,`Нужно ${nf(v.sc.reqLink,2)}`,v.link>=v.sc.reqLink,'📡')}
+  ${statHTML('Траектория',`${nf(v.p.prop.delta)} <small>ед.</small>`,v.p.prop.delta/Math.max(1,v.neededProp),`Нужно ${nf(v.neededProp)}`,v.p.prop.delta>=v.neededProp,'🧭')}
+ </div>`;
+}
+function designHTML(){
+ const v=calculate(),b=current.base,sc=v.sc,locked=!!(current.flight&&!current.flight.over),working=workingBuild(),mat=buildMaterials();
+ const opts=key=>{const o=PARTS[key].options;return Array.isArray(o)?o:o[current.scenario]};
+ const parts=Object.entries(PARTS).map(([key,data])=>`<div class="part"><label>${esc(data.label)}</label><select data-part="${key}" ${locked?'disabled':''}>${opts(key).map((o,i)=>`<option value="${i}" ${i===current.parts[key]?'selected':''}>${esc(o.n)}</option>`).join('')}</select></div>`).join('');
+ const mats=Object.entries(mat).map(([k,n])=>{const ok=b.stock[k]>=n;return`<span class="mat ${ok?'':'bad'}">${GOODS[k].icon} ${n} <em>${b.stock[k]}/${n}</em></span>`}).join('');
+ let buildBtn='';
+ if(locked)buildBtn=`<button class="btn wide" disabled>Идёт полёт</button>`;
+ else if(b.built===designSignature())buildBtn=`<button class="btn wide" disabled>✅ Ракета на площадке</button>`;
+ else if(working)buildBtn=`<button class="btn wide" disabled>🛠️ Сборка · до дня ${working.end}</button>`;
+ else buildBtn=`<button class="btn primary wide" data-act="build">🔧 Начать сборку</button>`;
+ const readyClaims=v.requirements.filter(r=>!r.ok);
+ return `<div class="stack">
+  <div class="missionHero"><div class="planet ${orbClass(current.scenario)}"></div><div class="grow"><h3>${sc.icon} ${esc(sc.name)}</h3><div class="sub">${esc(sc.body)} · ${DIFF[current.diff].label} · проектная смета ${nf(v.cost)} / ${nf(v.limit)} млн</div></div><span class="phaseTag">${b.built===designSignature()?'Готова':working?'Сборка':'Проект'}</span></div>
+  <div class="twoCol">
+   <div class="stack">
+    <div class="card"><div class="label">Орбита</div><div class="rangeRow"><input id="altRange" type="range" min="${sc.minAlt}" max="${sc.maxAlt}" step="25" value="${current.alt}" ${locked?'disabled':''}><span class="rangeVal" id="altValue">${current.alt} км</span></div><div class="hintLine" style="margin-top:5px">Идеальная высота: ${sc.ideal} км. Ниже — детальнее снимки, выше — шире обзор.</div></div>
+    <div class="card"><div class="label">Конструктор аппарата <b>· 7 систем + ракета</b></div><div class="partGrid">${parts}</div></div>
+   </div>
+   <div class="stack">
+    <div class="card" style="padding:10px"><div class="label">Ракета на площадке</div><canvas id="designPreview" width="280" height="300" style="width:100%;max-height:260px;display:block;border-radius:12px;background:linear-gradient(180deg,#071326,#0a1b30)"></canvas></div>
+    <div class="card"><div class="label">Сборка <b>· ${locked?'заблокирована':b.built===designSignature()?'готова':working?'идёт':'ожидает'}</b></div><div class="matGrid" style="margin-bottom:8px">${mats}</div>${buildBtn}<div class="hintLine" style="margin-top:7px">${working?`Работа завершится в день ${working.end}.`:`Сборка занимает ${2+current.parts.rocket} дн. Материалы списываются со склада.`}</div></div>
+   </div>
+  </div>
+  <div class="card" id="designStats"><div class="label">Инженерный баланс</div>${statBar(v)}${readyClaims.length?`<div class="hintLine" style="margin-top:8px;color:#d9a278">Ограничения: ${readyClaims.map(r=>esc(r.name)).join(' · ')}</div>`:''}</div>
+ </div>`;
+}
+function updateDesignLive(){
+ const v=calculate(),sc=v.sc;
+ const stats=$('designStats');if(stats)stats.innerHTML=`<div class="label">Инженерный баланс</div>${statBar(v)}`;
+ const av=$('altValue');if(av)av.textContent=current.alt+' км';
+ drawDesignPreview();
+}
+function scienceHTML(){
+ const b=current.base;
+ const jobs=b.jobs.filter(j=>j.type==='research');
+ const cards=Object.entries(TECH).map(([key,t])=>{
+  const level=b.tech[key]||0,cost=t.cost+level*7,pending=jobs.find(j=>j.key===key);
+  const max=level>=2;let label='Исследовать',disabled=max;
+  if(max)label='Максимум';
+  else if(pending){label=`Готово в день ${pending.end}`;disabled=true}
+  else if(b.wallet<cost){label='Мало денег';disabled=true}
+  const prog=pending?clamp((b.day-pending.start)/Math.max(1,pending.end-pending.start),0,1)*100:0;
+  return `<div class="techCard"><div class="head"><span class="ic">${t.icon}</span><strong>${esc(t.title)}</strong></div><p>${esc(t.desc)}</p><div class="pips">${[0,1].map(i=>`<span class="pip ${i<level?'on':''}"></span>`).join('')}<span class="hintLine" style="margin-left:4px">ур. ${level}/2</span></div>${pending?`<div class="progressBar"><span style="width:${prog}%"></span></div><div class="hintLine">Ещё ${Math.max(0,pending.end-b.day)} дн.</div>`:''}<div class="techFoot"><span class="techCost">💰 ${cost} · 📅 ${t.days+level} дн.</span><button class="btn small ${max?'':'primary'}" data-act="research" data-key="${key}" ${disabled?'disabled':''}>${label}</button></div></div>`;
+ }).join('');
+ return `<div class="stack"><div class="actionsRow" style="justify-content:space-between"><span class="hintLine">Исследования запускаются сразу, но завершаются на рассвете через указанное число дней.</span><span class="moneyPill">💰 ${nf(b.wallet)}</span></div><div class="techGrid">${cards}</div></div>`;
+}
+function storageHTML(){
+ const b=current.base,jobs=b.jobs.filter(j=>j.type==='order');
+ const cards=Object.entries(GOODS).map(([key,g])=>`<div class="resCard"><div class="top">${g.icon} ${esc(g.label)}</div><div class="qty">${b.stock[key]} <small>ед.</small></div><div class="hintLine">Партия +${g.qty} · ${g.days} дн. доставки</div><button class="btn small" data-act="order" data-key="${key}" ${b.wallet<g.cost?'disabled':''}>Заказать · 💰 ${g.cost}</button></div>`).join('');
+ const jobLines=jobs.length?jobs.map(j=>{const g=GOODS[j.key];const prog=clamp((b.day-j.start)/Math.max(1,j.end-j.start),0,1)*100;return`<div class="jobLine"><span>${g.icon}</span><b>${esc(g.label)} ×${j.qty}</b><div class="barMini"><span style="width:${prog}%"></span></div><span>${Math.max(0,j.end-b.day)} дн.</span></div>`}).join(''):'<div class="hintLine">Нет активных поставок.</div>';
+ return `<div class="stack"><div class="actionsRow" style="justify-content:space-between"><span class="hintLine">Материалы нужны для сборки ракеты. Заказ списывает деньги сразу, доставка идёт несколько дней.</span><span class="moneyPill">💰 ${nf(b.wallet)}</span></div><div class="resGrid">${cards}</div><div class="card"><div class="label">Доставка</div><div class="stack" style="gap:6px">${jobLines}</div></div></div>`;
+}
+function eventHTML(){
+ const data=activeModal?.data||{};
+ if(data.result){
+  const r=data.result;
+  return `<div class="stack">
+   <div class="card" style="text-align:center"><div class="label" style="justify-content:center">${esc(r.kind==='transit'?'Проверка перелёта':'Проверка миссии')} · D20</div><div class="diceBox"><div class="die" id="diceNum">${r.roll}</div><div class="diceMath">+ ${r.bonus} = ${r.roll+r.bonus}<small>нужно ${r.threshold}</small></div></div><div style="font-size:17px;font-weight:850;color:${r.success?'var(--teal)':'var(--red)'}">${r.success?'✅ Проверка пройдена':'⚠️ Проверка не пройдена'}</div><div class="hintLine" style="margin-top:6px">${esc(r.note)}</div></div>
+   <div class="card soft"><div class="label">${r.icon} ${esc(r.name)}</div><div class="hintLine">Выбранное действие: ${esc(r.choice)}</div></div>
+   <button class="btn primary wide" data-act="finishEvent">${data.pendingResult?'К итогам миссии →':'Продолжить'}</button>
+  </div>`;
+ }
+ const f=current.flight;
+ if(!f?.event)return `<div class="stack"><div class="hintLine">Ситуация уже решена.</div><button class="btn primary" data-act="close">Закрыть</button></div>`;
+ const ev=f.event.kind==='transit'?TRANSIT_EVENTS[f.event.type]:MISSION_EVENTS[f.event.type];
+ const threshold=eventDC();
+ const choices=ev.choices.map((c,i)=>`<button class="choice" data-act="choice" data-key="${i}"><span class="ic">${c.action==='safe'?'🛡':c.action==='fuel'?'🚀':c.action==='energy'?'🔋':c.action==='science'?'🔬':'🎲'}</span><span><b>${esc(c.txt||c.label)}</b><small>${esc(c.effect||'')}</small></span><span class="bonus">D20 +${eventBonus(ev,c.action)}</span></button>`).join('');
+ return `<div class="stack">
+  <div class="missionHero"><div class="resultIcon" style="width:62px;height:62px;font-size:30px;border-color:rgba(255,196,107,.4);background:rgba(62,44,18,.4)">${ev.icon}</div><div class="grow"><h3>${esc(ev.name||ev.title)}</h3><div class="sub">${esc(ev.desc)}</div></div><span class="phaseTag">D20 ≥ ${threshold+1}</span></div>
+  <div class="card soft"><div class="label">Выберите решение</div><div class="choiceGrid">${choices}</div></div>
+  <div class="hintLine">Бросок D20 + бонус оборудования и команды. При провале возможны повреждения и потеря орбиты.</div>
+ </div>`;
+}
+function resultHTML(){
+ const r=current.report;if(!r)return `<div class="stack"><div class="hintLine">Отчёт появится после завершения миссии.</div><button class="btn" data-act="close">Закрыть</button></div>`;
+ const stats=`<div class="statGrid">
+  ${statHTML('Наука',`${nf(r.science)} <small>/ ${nf(r.scienceGoal)}</small>`,r.science/r.scienceGoal,'Научная цель',r.science>=r.scienceGoal,'🔭')}
+  ${statHTML('Передано',`${nf(r.transmitted,2)} <small>/ ${nf(r.dataGoal,2)}</small>`,r.transmitted/r.dataGoal,'ГБ на Землю',r.transmitted>=r.dataGoal,'📡')}
+  ${statHTML('Целостность',`${nf(r.health)}<small>%</small>`,r.health/100,'Порог 30%',r.health>=30,'🛡')}
+  ${statHTML('Орбита',`${nf(r.orbit)}<small>%</small>`,r.orbit/100,'Порог 25%',r.orbit>=25,'🧭')}
+  ${statHTML('Батарея',`${nf(r.battery)} <small>Вт·ч</small>`,r.battery/2400,'На момент финиша',r.battery>200,'🔋')}
+  ${statHTML('Топливо',`${nf(r.fuel)} <small>ед.</small>`,r.fuel/175,'На момент финиша',r.fuel>0,'⛽')}
+ </div>`;
+ return `<div class="stack">
+  <div class="resultHero ${r.win?'':'fail'}"><div class="resultIcon">${r.win?'🏆':'🛑'}</div><div class="grow"><h3>${r.win?'Миссия успешна':'Цели выполнены не полностью'}</h3><p>${esc(r.reason)} · ${r.day} из ${r.days} дней · ${DIFF[r.difficulty]?.label||r.difficulty}</p></div><div class="scoreRing">${r.score}<small>из 100</small></div></div>
+  ${stats}
+  <div class="card"><div class="label">Разбор</div><ul class="reasonList">${r.why.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><div class="hintLine" style="margin-top:9px">Награда за миссию: <b style="color:#ffd48b">+${nf(r.reward)}</b> · координация команды ${r.coordination}/100</div></div>
+  <div class="actionsRow"><button class="btn primary" data-act="newMission">🛰️ Новая миссия</button><button class="btn" data-act="close">Вернуться в хаб</button><button class="btn ghost small" data-act="resetGame">↻ Кампания заново</button></div>
+ </div>`;
+}
+/* ---------- room geometry and navigation ---------- */
+const ROOMS={
+ science:{x:80,y:290,w:250,h:310,accent:'#59efc2',station:{x:205,y:415}},
+ storage:{x:790,y:290,w:250,h:310,accent:'#ffc46b',station:{x:915,y:415}},
+ design:{x:420,y:80,w:280,h:190,accent:'#6ba9ff',station:{x:560,y:205}},
+ command:{x:400,y:330,w:320,h:360,accent:'#5fe0ff',station:{x:560,y:485}}
+};
+const WALKS=[
+ {x:96,y:306,w:218,h:278},{x:416,y:346,w:288,h:328},{x:806,y:306,w:218,h:278},{x:436,y:96,w:248,h:158},
+ {x:314,y:420,w:102,h:60},{x:704,y:420,w:102,h:60},{x:550,y:254,w:60,h:92}
+];
+const J={left:{x:365,y:450},center:{x:560,y:450},right:{x:755,y:450},top:{x:580,y:300}};
+function inRect(r,x,y,pad=0){return x>=r.x-pad&&x<=r.x+r.w+pad&&y>=r.y-pad&&y<=r.y+r.h+pad}
+function roomAt(x,y){for(const k of ['design','science','storage','command'])if(inRect(ROOMS[k],x,y))return k;return null}
+function walkable(x,y){return WALKS.some(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)}
+function zoneAt(x,y){for(const k of ['science','storage','design','command'])if(inRect(ROOMS[k],x,y,8))return k;
+ if(x>=314&&x<=416&&y>=405&&y<=495)return'left';if(x>=704&&x<=806&&y>=405&&y<=495)return'right';if(x>=535&&x<=625&&y>=240&&y<=360)return'top';return'center'}
+function routeForRoom(room){
+ const z=zoneAt(hubSprite.x,hubSprite.y),r=ROOMS[room],route=[];
+ if(room==='science'){
+  if(z==='science')route.push(r.station);else{if(z!=='left'&&z!=='center')route.push(z==='storage'?J.right:z==='design'?J.top:J.center);if(z!=='left')route.push(J.left);route.push(r.station)}
+ }else if(room==='storage'){
+  if(z==='storage')route.push(r.station);else{if(z!=='right'&&z!=='center')route.push(z==='science'?J.left:z==='design'?J.top:J.center);if(z!=='right')route.push(J.right);route.push(r.station)}
+ }else if(room==='design'){
+  if(z==='design')route.push(r.station);else{if(z!=='top'&&z!=='center')route.push(z==='science'?J.left:z==='storage'?J.right:J.center);if(z!=='top')route.push(J.top);route.push(r.station)}
+ }else{
+  if(z==='command')route.push(r.station);else{if(z!=='center')route.push(z==='science'?J.left:z==='storage'?J.right:z==='design'?J.top:J.center);route.push(r.station)}
+ }
+ return route;
+}
+function navigateRoom(room){
+ if(!ROOMS[room])return;
+ const d=Math.hypot(hubSprite.x-ROOMS[room].station.x,hubSprite.y-ROOMS[room].station.y);
+ hubSprite.route=d<56?[]:routeForRoom(room);hubSprite.onArrival=room;hubSprite.room=room;
+ if(!hubSprite.route.length)openModal(room);
+}
+function setWalkTarget(x,y){
+ if(!walkable(x,y))return;
+ const z=zoneAt(x,y),oz=zoneAt(hubSprite.x,hubSprite.y),route=[];
+ if(z===oz||(z==='left'&&oz==='science')||(z==='right'&&oz==='storage')||(z==='top'&&oz==='design')||(oz==='left'||oz==='right'||oz==='top'))route.push({x,y});
+ else{
+  if(oz==='science')route.push(J.left);if(oz==='storage')route.push(J.right);if(oz==='design')route.push(J.top);if(oz!=='center')route.push(J.center);
+  if(z==='science')route.push(J.left);if(z==='storage')route.push(J.right);if(z==='design')route.push(J.top);
+  route.push({x,y});
+ }
+ hubSprite.route=route;hubSprite.onArrival=null;
+}
+function updateMovement(dt){
+ const speed=270*(dt/1000),wasMoving=hubSprite.route.length>0;
+ if(hubSprite.route.length){
+  const p=hubSprite.route[0],dx=p.x-hubSprite.x,dy=p.y-hubSprite.y,dist=Math.hypot(dx,dy);
+  if(dist<=speed+1){hubSprite.x=p.x;hubSprite.y=p.y;hubSprite.route.shift();if(!hubSprite.route.length&&hubSprite.onArrival){const room=hubSprite.onArrival;hubSprite.onArrival=null;openModal(room)}}
+  else{hubSprite.x+=dx/dist*speed;hubSprite.y+=dy/dist*speed;if(Math.abs(dx)>2)hubSprite.facing=dx>0?1:-1}
+  hubSprite.walking=true;hubSprite.phase+=dt/85;
+ }else{
+  let dx=Number(!!(moveKeys.d||moveKeys.ArrowRight))-Number(!!(moveKeys.a||moveKeys.ArrowLeft));
+  let dy=Number(!!(moveKeys.s||moveKeys.ArrowDown))-Number(!!(moveKeys.w||moveKeys.ArrowUp));
+  if(activeModal){dx=0;dy=0}
+  if(dx||dy){
+   const l=Math.hypot(dx,dy),nx=hubSprite.x+dx/l*speed,ny=hubSprite.y+dy/l*speed;
+   if(walkable(nx,hubSprite.y))hubSprite.x=nx;if(walkable(hubSprite.x,ny))hubSprite.y=ny;
+   if(dx)hubSprite.facing=dx>0?1:-1;hubSprite.walking=true;hubSprite.phase+=dt/85;
+  }else hubSprite.walking=false;
+ }
+ if(!wasMoving&&!hubSprite.route.length&&!moveKeys.w&&!moveKeys.a&&!moveKeys.s&&!moveKeys.d)hubSprite.walking=false;
+}
+function handleAction(el){
+ const act=el.dataset.act,key=el.dataset.key;
+ if(act==='selectMission')selectMission(key);
+ else if(act==='diff')selectDifficulty(key);
+ else if(act==='crew')setCrew(Number(key));
+ else if(act==='launch')launchMission();
+ else if(act==='research')startResearch(key);
+ else if(act==='order')orderSupply(key);
+ else if(act==='build')startBuild();
+ else if(act==='missionAct')missionAction(key);
+ else if(act==='choice')resolveEvent(Number(key));
+ else if(act==='openEvent'){if(current.flight?.event)openModal('event');else showToastIcon('✓')}
+ else if(act==='openSpace'){closeModal();scene='space';updateSceneNav();showToastIcon('🛰️')}
+ else if(act==='openResult'){if(current.flight?.over)openModal('result');else showToastIcon('⏳')}
+ else if(act==='newMission')clearForNewMission();
+ else if(act==='resetGame')resetGame();
+ else if(act==='finishEvent'){const pending=activeModal?.data?.pendingResult;closeModal();if(pending&&current.report)setTimeout(()=>openModal('result'),160);else if(current.flight&&!current.flight.over){scene='space';updateSceneNav();setTimeout(()=>openModal('command'),160)}else{scene='hub';updateSceneNav()}}
+ else if(act==='close')closeModal();
+}
+function resolveEsc(){
+ if(activeModal)closeModal();
+}
+/* ---------- canvas ---------- */
+const canvas=$('hubCanvas'),g2d=canvas.getContext('2d');
+let W=0,H=0;
+const stars=Array.from({length:160},(_,i)=>({x:(i*179.37)%1000/1000,y:(i*283.11)%1000/1000,r:i%13===0?1.7:.5+(i%4)*.25,p:i%7}));
+function resizeCanvas(){
+ W=window.innerWidth;H=window.innerHeight;const dpr=Math.min(window.devicePixelRatio||1,2);
+ canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);canvas.style.width=W+'px';canvas.style.height=H+'px';
+ view.dpr=dpr;view.w=W;view.h=H;view.scale=Math.min(W/1440,H/810);
+ view.ox=(W-1440*view.scale)/2;view.oy=(H-810*view.scale)/2;
+}
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const rgb=a=>`rgb(${Math.round(a[0])},${Math.round(a[1])},${Math.round(a[2])})`;
+function rr(g,x,y,w,h,r){g.beginPath();g.roundRect(x,y,w,h,r)}
+function glow(g,x,y,r,color,alpha=1){const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,color);gr.addColorStop(1,'rgba(0,0,0,0)');g.save();g.globalAlpha=alpha;g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);g.restore()}
+function drawBackdrop(g,t){
+ const n=clamp(cycle.night,0,1);
+ const top=mix([20,54,84],[3,7,20],n),mid=mix([13,38,61],[6,13,30],n),bot=mix([7,20,34],[2,5,14],n);
+ const grad=g.createLinearGradient(0,0,0,H);grad.addColorStop(0,rgb(top));grad.addColorStop(.55,rgb(mid));grad.addColorStop(1,rgb(bot));
+ g.fillStyle=grad;g.fillRect(0,0,W,H);
+ const horizon=H*.52;
+ const sunX=W*.82,sunY=H*.17,R=Math.min(W,H)*.085;
+ const sunA=1-n;
+ if(sunA>.02){g.save();g.globalAlpha=sunA;glow(g,sunX,sunY,R*2.6,'rgba(255,195,96,.20)');const sg=g.createRadialGradient(sunX-R*.3,sunY-R*.3,R*.1,sunX,sunY,R);sg.addColorStop(0,'#fff5cf');sg.addColorStop(.6,'#ffd58b');sg.addColorStop(1,'#ff9d58');g.fillStyle=sg;g.beginPath();g.arc(sunX,sunY,R,0,7);g.fill();g.restore()}
+ if(n>.02){g.save();g.globalAlpha=n;glow(g,sunX,sunY,R*2.2,'rgba(137,151,255,.12)');const mg=g.createRadialGradient(sunX-R*.3,sunY-R*.3,R*.1,sunX,sunY,R*.85);mg.addColorStop(0,'#f3f7ff');mg.addColorStop(.65,'#bbc8dd');mg.addColorStop(1,'#6d7c9c');g.fillStyle=mg;g.beginPath();g.arc(sunX,sunY,R*.85,0,7);g.fill();g.fillStyle='rgba(90,105,135,.22)';for(let i=0;i<5;i++){g.beginPath();g.arc(sunX+Math.cos(i*2.1)*R*.42,sunY+Math.sin(i*2.7)*R*.34,R*(.07+(i%3)*.03),0,7);g.fill()}g.restore()}
+ for(const s of stars){const a=(n*.75+.04)*(.45+.55*Math.abs(Math.sin(t/1800+s.p)));if(a<.05)continue;g.globalAlpha=a;g.fillStyle='#cfeaff';g.beginPath();g.arc(s.x*W,s.y*H*.78,s.r,0,7);g.fill()}
+ g.globalAlpha=1;
+ // atmospheric haze
+ const haze=g.createLinearGradient(0,horizon-90,0,horizon+160);haze.addColorStop(0,'rgba(90,170,220,0)');haze.addColorStop(.5,`rgba(88,164,210,${.045*(1-n)})`);haze.addColorStop(1,'rgba(90,170,220,0)');g.fillStyle=haze;g.fillRect(0,horizon-90,W,250);
+ const vg=g.createRadialGradient(W*.5,H*.48,Math.min(W,H)*.25,W*.5,H*.48,Math.max(W,H)*.72);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,`rgba(0,3,10,${.52+n*.18})`);g.fillStyle=vg;g.fillRect(0,0,W,H);
+}
+function drawGround(g,t){
+ const n=cycle.night;
+ const gg=g.createLinearGradient(0,0,0,810);gg.addColorStop(0,`rgb(${mix([14,34,52],[5,12,26],n).map(Math.round).join(',')})`);gg.addColorStop(1,`rgb(${mix([8,22,38],[4,9,20],n).map(Math.round).join(',')})`);
+ g.fillStyle=gg;g.fillRect(0,0,1440,810);
+ // distant terrain silhouettes
+ g.fillStyle=`rgba(2,8,18,${.28+n*.2})`;
+ g.beginPath();g.moveTo(0,124);for(let x=0;x<=1440;x+=80){g.lineTo(x,98+Math.sin(x*.013)*24+Math.cos(x*.023)*11)}g.lineTo(1440,0);g.lineTo(0,0);g.fill();
+ // ground grid
+ g.save();g.globalAlpha=.12+n*.02;g.strokeStyle='#76b8d8';g.lineWidth=1;
+ for(let x=-100;x<1500;x+=80){g.beginPath();g.moveTo(x,0);g.lineTo(x-120,820);g.stroke()}
+ for(let y=90;y<820;y+=68){g.beginPath();g.moveTo(0,y);g.lineTo(1440,y);g.stroke()}
+ g.restore();
+ // terrain specks
+ g.fillStyle=`rgba(164,200,220,${.12+n*.05})`;
+ for(let i=0;i<70;i++){const x=(i*211+37)%1440,y=(i*137+41)%810;g.fillRect(x,y,1.5+(i%3),1)}
+ // perimeter deck under building and pad
+ g.save();g.shadowColor='#000a';g.shadowBlur=40;g.fillStyle=`rgb(${mix([9,24,38],[4,12,23],n).map(Math.round).join(',')})`;g.shadowBlur=0;
+ rr(g,26,34,1028,754,28);g.fillStyle=`rgba(8,20,34,${.72})`;g.fill();
+ g.strokeStyle='rgba(94,163,207,.16)';g.lineWidth=2;g.stroke();
+ rr(g,1060,150,356,620,26);g.fillStyle=`rgba(10,23,38,${.66})`;g.fill();g.strokeStyle='rgba(112,174,214,.14)';g.stroke();g.restore();
+}
+function drawBuildingBase(g,t){
+ const n=cycle.night;
+ g.save();g.shadowColor='rgba(0,0,0,.65)';g.shadowBlur=26;g.shadowOffsetY=16;g.fillStyle='#091726';
+ rr(g,40,52,1010,730,22);g.fill();g.restore();
+ const base=g.createLinearGradient(40,52,1050,782);base.addColorStop(0,`rgb(${mix([17,38,58],[7,16,30],n).map(Math.round).join(',')})`);base.addColorStop(1,`rgb(${mix([9,22,38],[5,11,22],n).map(Math.round).join(',')})`);
+ g.fillStyle=base;rr(g,40,52,1010,730,22);g.fill();
+ g.strokeStyle='rgba(117,184,227,.18)';g.lineWidth=2;g.stroke();
+ // outer wall band
+ g.strokeStyle=`rgba(111,173,215,${.24+n*.08})`;g.lineWidth=3;rr(g,52,64,986,706,17);g.stroke();
+ // windows along the outer top and bottom walls
+ for(let i=0;i<12;i++){const x=88+i*78;g.fillStyle=cycle.night>.3?`rgba(111,202,255,${.11+n*.22})`:`rgba(153,218,255,.12)`;g.fillRect(x,57,52,7);g.fillRect(x,770,52,7)}
+}
+function drawCorridorFloors(g){
+ const n=cycle.night;const fill=mix([19,43,60],[6,18,32],n);
+ for(const r of [{x:330,y:420,w:70,h:60},{x:720,y:420,w:70,h:60},{x:550,y:270,w:60,h:60}]){
+  g.fillStyle=`rgb(${fill.map(Math.round)})`;g.fillRect(r.x,r.y,r.w,r.h);
+  g.strokeStyle='rgba(123,187,224,.11)';g.lineWidth=1;
+  for(let x=r.x+16;x<r.x+r.w;x+=16){g.beginPath();g.moveTo(x,r.y);g.lineTo(x,r.y+r.h);g.stroke()}
+  for(let y=r.y+16;y<r.y+r.h;y+=16){g.beginPath();g.moveTo(r.x,y);g.lineTo(r.x+r.w,y);g.stroke()}
+ }
+ // light strips
+ for(const [x,y,w,h]of[[348,426,34,4],[738,426,34,4],[578,278,4,30]]){g.fillStyle=`rgba(106,231,255,${.18+n*.25})`;g.fillRect(x,y,w,h)}
+}
+function drawFloor(g,room,t){
+ const r=ROOMS[room],n=cycle.night,a=r.accent;
+ const baseColors={
+  science:[15,38,45],storage:[40,34,24],design:[15,31,55],command:[12,33,49]
+ };
+ const c=mix(baseColors[room],[7,16,28],n);
+ const grad=g.createLinearGradient(r.x,r.y,r.x,r.y+r.h);grad.addColorStop(0,`rgb(${c.map((x,i)=>Math.round(Math.min(255,x+(i===1?9:5)))).join(',')})`);grad.addColorStop(1,`rgb(${c.map(Math.round).join(',')})`);
+ g.fillStyle=grad;g.fillRect(r.x,r.y,r.w,r.h);
+ // grid panels
+ g.save();g.beginPath();g.rect(r.x,r.y,r.w,r.h);g.clip();g.strokeStyle=a+'10';g.lineWidth=1;
+ for(let x=r.x+24;x<r.x+r.w;x+=32){g.beginPath();g.moveTo(x,r.y);g.lineTo(x,r.y+r.h);g.stroke()}
+ for(let y=r.y+24;y<r.y+r.h;y+=32){g.beginPath();g.moveTo(r.x,y);g.lineTo(r.x+r.w,y);g.stroke()}
+ // accent sweep at floor edges
+ const edge=g.createLinearGradient(r.x,r.y,r.x+r.w,r.y+r.h);edge.addColorStop(0,a+'20');edge.addColorStop(.5,a+'05');edge.addColorStop(1,a+'18');g.fillStyle=edge;g.fillRect(r.x,r.y,r.w,r.h);
+ g.restore();
+ // floor markings
+ g.save();g.strokeStyle=a+'2e';g.lineWidth=2;
+ if(room==='science'){g.beginPath();g.arc(205,470,64,0,7);g.stroke();g.beginPath();g.arc(205,470,44,0,7);g.stroke()}
+ if(room==='storage'){g.setLineDash([10,9]);g.strokeRect(r.x+24,r.y+22,r.w-48,r.h-44);g.setLineDash([])}
+ if(room==='design'){g.beginPath();g.arc(560,170,56,0,7);g.stroke();g.beginPath();g.moveTo(470,245);g.lineTo(650,245);g.stroke()}
+ if(room==='command'){for(let i=0;i<3;i++){g.beginPath();g.ellipse(560,500,88-i*17,55-i*11,0,0,7);g.stroke()}}
+ g.restore();
+}
+function wallSeg(g,x1,y1,x2,y2,a,n){
+ g.save();g.lineCap='square';
+ g.strokeStyle=`rgba(1,5,12,${.55+n*.15})`;g.lineWidth=15;g.beginPath();g.moveTo(x1,y1+4);g.lineTo(x2,y2+4);g.stroke();
+ g.strokeStyle=`rgb(${mix([45,78,99],[16,35,56],n).map(Math.round).join(',')})`;g.lineWidth=11;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+ g.strokeStyle=`rgba(164,215,240,${.24+n*.05})`;g.lineWidth=2;g.beginPath();g.moveTo(x1,y1-2);g.lineTo(x2,y2-2);g.stroke();
+ g.strokeStyle=a+'55';g.lineWidth=1;g.beginPath();g.moveTo(x1,y1+4);g.lineTo(x2,y2+4);g.stroke();
+ g.restore();
+}
+function drawWalls(g,t){
+ const n=cycle.night;
+ // science
+ wallSeg(g,80,290,330,290,'#59efc2',n);wallSeg(g,80,290,80,600,'#59efc2',n);wallSeg(g,80,600,330,600,'#59efc2',n);wallSeg(g,330,290,330,420,'#59efc2',n);wallSeg(g,330,480,330,600,'#59efc2',n);
+ // storage
+ wallSeg(g,790,290,1040,290,'#ffc46b',n);wallSeg(g,1040,290,1040,600,'#ffc46b',n);wallSeg(g,790,600,1040,600,'#ffc46b',n);wallSeg(g,790,290,790,420,'#ffc46b',n);wallSeg(g,790,480,790,600,'#ffc46b',n);
+ // design
+ wallSeg(g,420,80,700,80,'#6ba9ff',n);wallSeg(g,420,80,420,270,'#6ba9ff',n);wallSeg(g,700,80,700,270,'#6ba9ff',n);wallSeg(g,420,270,550,270,'#6ba9ff',n);wallSeg(g,610,270,700,270,'#6ba9ff',n);
+ // command
+ wallSeg(g,400,330,550,330,'#5fe0ff',n);wallSeg(g,610,330,720,330,'#5fe0ff',n);wallSeg(g,400,330,400,420,'#5fe0ff',n);wallSeg(g,400,480,400,690,'#5fe0ff',n);wallSeg(g,720,330,720,420,'#5fe0ff',n);wallSeg(g,720,480,720,690,'#5fe0ff',n);wallSeg(g,400,690,720,690,'#5fe0ff',n);
+ // doors thresholds and jambs
+ const doors=[[330,420,0,60,'#59efc2'],[400,420,0,60,'#5fe0ff'],[720,420,0,60,'#5fe0ff'],[790,420,0,60,'#ffc46b'],[550,270,60,0,'#6ba9ff'],[550,330,60,0,'#5fe0ff']];
+ for(const[x,y,w,h,a]of doors){g.fillStyle='rgba(112,205,255,.08)';if(h)g.fillRect(x-5,y+5,10,h-10);else g.fillRect(x+5,y-5,w-10,10);g.strokeStyle=a+'77';g.lineWidth=2;if(h){g.beginPath();g.moveTo(x-6,y+3);g.lineTo(x-6,y+h-3);g.stroke();g.beginPath();g.moveTo(x+6,y+3);g.lineTo(x+6,y+h-3);g.stroke()}else{g.beginPath();g.moveTo(x+3,y-6);g.lineTo(x+w-3,y-6);g.stroke();g.beginPath();g.moveTo(x+3,y+6);g.lineTo(x+w-3,y+6);g.stroke()}}
+}
+function drawMonitor(g,x,y,w,h,accent,on=true){
+ g.save();g.translate(x,y);
+ g.fillStyle='#1a2d42';g.fillRect(-w*.18,h*.72,w*.36,5);g.fillRect(-3,h*.55,6,h*.2);
+ g.fillStyle='#0b1626';g.strokeStyle='#5f86a3';g.lineWidth=1.5;rr(g,-w/2,0,w,h,4);g.fill();g.stroke();
+ const grad=g.createLinearGradient(-w/2,0,w/2,h);grad.addColorStop(0,on?accent+'55':'#26394b');grad.addColorStop(1,on?accent+'12':'#1b2a3a');g.fillStyle=grad;g.fillRect(-w/2+3,3,w-6,h-6);
+ if(on){g.strokeStyle=accent+'88';g.lineWidth=1;g.beginPath();g.moveTo(-w/2+6,h*.62);for(let i=0;i<6;i++){g.lineTo(-w/2+6+(w-12)*i/5,h*.62+Math.sin(i*1.9+x)*h*.14)}g.stroke();g.fillStyle=accent;g.fillRect(-w/2+6,6,3,3)}
+ g.restore();
+}
+function drawMicroscope(g,x,y,s=1){
+ g.save();g.translate(x,y);g.scale(s,s);
+ g.fillStyle='rgba(0,0,0,.35)';g.beginPath();g.ellipse(0,17,19,6,0,0,7);g.fill();
+ g.fillStyle='#7f9eb4';rr(g,-15,12,30,6,3);g.fill();
+ g.strokeStyle='#c6e8f4';g.lineWidth=4;g.lineCap='round';g.beginPath();g.moveTo(-6,12);g.quadraticCurveTo(-15,-5,-3,-15);g.lineTo(5,-23);g.stroke();
+ g.fillStyle='#dff8ff';rr(g,-2,-30,13,8,3);g.fill();g.strokeStyle='#89b4c8';g.lineWidth=1.5;g.stroke();
+ g.fillStyle='#233a4b';g.fillRect(-11,2,22,5);
+ g.fillStyle='#59efc2';g.beginPath();g.arc(2,-1,5,0,7);g.fill();g.globalAlpha=.3;glow(g,2,-1,20,'#59efc2');g.globalAlpha=1;
+ g.restore();
+}
+function drawFlask(g,x,y,s=1,color='#59efc2'){
+ g.save();g.translate(x,y);g.scale(s,s);g.strokeStyle='#b7dbe8';g.lineWidth=1.6;g.fillStyle=color+'33';
+ g.beginPath();g.moveTo(-7,-12);g.lineTo(-7,-3);g.lineTo(-15,12);g.quadraticCurveTo(0,17,15,12);g.lineTo(7,-3);g.lineTo(7,-12);g.closePath();g.fill();g.stroke();
+ g.fillStyle=color+'77';g.beginPath();g.moveTo(-13,7);g.quadraticCurveTo(0,11,13,7);g.lineTo(15,12);g.quadraticCurveTo(0,17,-15,12);g.closePath();g.fill();
+ g.restore();
+}
+function drawCrate(g,x,y,w,h,color,accent){
+ const gr=g.createLinearGradient(x,y,x,y+h);gr.addColorStop(0,color);gr.addColorStop(1,'rgba(22,28,32,.95)');
+ g.fillStyle=gr;rr(g,x,y,w,h,4);g.fill();g.strokeStyle='rgba(255,255,255,.12)';g.lineWidth=1.2;g.stroke();
+ g.strokeStyle=accent+'55';g.lineWidth=2;g.beginPath();g.moveTo(x+4,y+4);g.lineTo(x+w-4,y+h-4);g.moveTo(x+w-4,y+4);g.lineTo(x+4,y+h-4);g.stroke();
+ g.fillStyle='rgba(0,0,0,.18)';g.fillRect(x+3,y+h*.38,w-6,3);
+}
+function drawShelf(g,x,y,w,h,accent){
+ g.fillStyle='#152538';g.fillRect(x,y,w,h);g.strokeStyle='#385770';g.lineWidth=2;g.strokeRect(x,y,w,h);
+ const cols=Math.max(2,Math.round(w/34));
+ for(let i=0;i<cols;i++){const cw=(w-8)/cols;g.fillStyle=['#a3733f','#577b79','#647a9f','#987e58'][i%4];g.fillRect(x+4+i*cw,y+6,cw-3,h*.34);g.fillStyle='rgba(255,255,255,.1)';g.fillRect(x+5+i*cw,y+7,cw-5,2)}
+ g.strokeStyle=accent+'55';g.beginPath();g.moveTo(x+3,y+h*.52);g.lineTo(x+w-3,y+h*.52);g.stroke();
+}
+function drawScience(g,t){
+ const n=cycle.night,a='#59efc2';
+ // cabinets
+ g.fillStyle='#132b34';g.fillRect(96,330,28,115);g.strokeStyle='#3d6d72';g.strokeRect(96,330,28,115);
+ for(let i=0;i<5;i++){g.fillStyle=['#9ad8c8','#6fb0a8','#b7d9a3','#79c2c9','#c8a98b'][i];g.fillRect(102,340+i*20,16,10)}
+ // top bench
+ g.fillStyle='#2b4d55';rr(g,118,332,172,42,5);g.fill();g.strokeStyle='#527c83';g.lineWidth=2;g.stroke();
+ g.fillStyle='#1b333c';g.fillRect(126,340,156,12);
+ drawMicroscope(g,154,347,.92);drawFlask(g,238,350,.8,'#78d9ff');drawFlask(g,255,350,.65,'#b4f27d');
+ // wall screen
+ drawMonitor(g,266,309,46,27,'#59efc2');
+ // holo table / DNA
+ g.fillStyle='#18313e';g.beginPath();g.arc(270,430,29,0,7);g.fill();g.strokeStyle='#4e8188';g.lineWidth=2;g.stroke();
+ g.save();g.globalAlpha=.55+n*.2;g.strokeStyle='#5ff5c8';g.lineWidth=2;
+ for(let i=0;i<2;i++){g.beginPath();for(let k=0;k<16;k++){const yy=405+k*3,xx=270+Math.sin(k*.85+t/900+i*Math.PI)*13;if(k===0)g.moveTo(xx,yy);else g.lineTo(xx,yy)}g.stroke()}
+ g.globalAlpha=.4;for(let k=0;k<6;k++){const yy=410+k*8;g.beginPath();g.moveTo(270-14,yy);g.lineTo(270+14,yy+4);g.stroke()}g.restore();
+ // bottom bench
+ g.fillStyle='#2b4d55';rr(g,118,520,172,42,5);g.fill();g.strokeStyle='#527c83';g.stroke();
+ g.fillStyle='#1b333c';g.fillRect(126,528,156,12);
+ // centrifuge
+ g.fillStyle='#a4c1cc';g.beginPath();g.arc(167,537,17,0,7);g.fill();g.fillStyle='#37505c';g.beginPath();g.arc(167,537,10,0,7);g.fill();for(let i=0;i<6;i++){g.fillStyle='#7fe7c6';g.beginPath();g.arc(167+Math.cos(i*1.05)*10,537+Math.sin(i*1.05)*10,2.5,0,7);g.fill()}
+ drawFlask(g,235,538,.85,'#5fe0ff');drawFlask(g,255,539,.7,'#b9f47d');
+ // stools and plant
+ g.fillStyle='#203947';g.beginPath();g.arc(215,480,10,0,7);g.arc(155,480,10,0,7);g.fill();
+ g.fillStyle='#31554b';g.fillRect(300,540,20,28);g.fillStyle='#59efc2';g.globalAlpha=.55;g.beginPath();g.ellipse(310,536,13,20,0,0,7);g.fill();g.globalAlpha=1;
+ // interaction glow at holo
+ const pul=.5+.5*Math.sin(t/650);if(!activeModal)glow(g,270,430,45,'rgba(89,239,194,'+(.08+pul*.06)+')');
+}
+function drawStorage(g,t){
+ const n=cycle.night,a='#ffc46b';
+ drawShelf(g,812,315,206,42,a);drawShelf(g,812,370,32,146,a);
+ // crates
+ drawCrate(g,858,390,44,40,'#8a633b','#ffc46b');drawCrate(g,908,390,50,34,'#5e7a78','#8be4d4');drawCrate(g,966,390,38,44,'#6a6d92','#b6b4ff');
+ drawCrate(g,854,442,52,46,'#7b5c3e','#ffc46b');drawCrate(g,913,436,52,52,'#4f6f70','#8be4d4');
+ drawCrate(g,977,446,30,38,'#7f6c4d','#ffd77d');
+ drawCrate(g,860,510,96,52,'#5a7287','#9ac8ff');drawCrate(g,966,512,44,50,'#8a633b','#ffc46b');
+ // barrels
+ for(let i=0;i<2;i++){const x=830+i*24,y=550;g.fillStyle='#a36c42';g.beginPath();g.arc(x,y,12,0,7);g.fill();g.strokeStyle='#d7a06b';g.lineWidth=1.4;g.stroke();g.fillStyle='#3a2e22';g.beginPath();g.arc(x,y,5,0,7);g.fill()}
+ // pallet
+ g.fillStyle='#3c4e5e';g.fillRect(902,578,84,14);g.fillStyle='#20303d';for(let i=0;i<4;i++)g.fillRect(908+i*19,578,8,14);
+ // forklift hint
+ g.fillStyle='#7e6a43';g.fillRect(794,537,33,20);g.fillStyle='#344a58';g.fillRect(799,542,12,9);g.fillStyle='#202c34';g.beginPath();g.arc(801,559,5,0,7);g.arc(819,559,5,0,7);g.fill();
+ // scanner arch and glow near station
+ g.strokeStyle=a+'55';g.lineWidth=2;g.beginPath();g.arc(925,414,37,0,7);g.stroke();const pul=.5+.5*Math.sin(t/720);
+ if(!activeModal)glow(g,915,414,48,'rgba(255,196,107,'+(.06+pul*.05)+')');
+}
+function drawDesign(g,t){
+ const n=cycle.night,a='#6ba9ff';
+ // wall screens with schematics
+ for(const [x,y,w,h] of [[438,98,58,36],[634,98,48,36],[438,220,34,30]]){
+  g.fillStyle='#0b1a2d';g.strokeStyle='#4c7da8';g.lineWidth=2;rr(g,x,y,w,h,4);g.fill();g.stroke();
+  g.strokeStyle=a+'66';g.lineWidth=1;g.beginPath();g.moveTo(x+6,y+h*.6);g.lineTo(x+w*.35,y+h*.25);g.lineTo(x+w*.55,y+h*.58);g.lineTo(x+w-6,y+h*.2);g.stroke();
+  g.fillStyle=a;g.globalAlpha=.4;g.fillRect(x+5,y+5,4,2);g.globalAlpha=1;
+ }
+ // drafting table
+ g.fillStyle='#213c57';rr(g,466,122,128,54,6);g.fill();g.strokeStyle='#5d8fb8';g.lineWidth=2;g.stroke();
+ g.fillStyle='#0f2d4d';rr(g,474,128,112,41,3);g.fill();
+ g.strokeStyle='#6ad5ff';g.globalAlpha=.55;g.lineWidth=1;
+ g.beginPath();g.moveTo(490,138);g.lineTo(556,138);g.moveTo(490,146);g.lineTo(540,146);g.moveTo(490,154);g.lineTo(565,154);g.stroke();
+ g.strokeStyle='#9bceff';g.globalAlpha=.8;g.beginPath();g.moveTo(524,134);g.lineTo(530,158);g.lineTo(520,158);g.closePath();g.stroke();g.globalAlpha=1;
+ // lamp
+ g.fillStyle='#3c6f92';g.fillRect(514,110,32,4);g.fillStyle=a+'66';g.fillRect(520,114,20,4);
+ // tool cart
+ g.fillStyle='#243a4e';rr(g,440,232,64,24,4);g.fill();g.strokeStyle='#52708a';g.stroke();for(let i=0;i<4;i++){g.fillStyle=['#7aa9c4','#b7d2df','#ffc46b','#7c9bae'][i];g.fillRect(445+i*14,237,8,12)}
+ // rocket hologram over a plinth
+ g.fillStyle='#192f46';g.beginPath();g.arc(646,180,24,0,7);g.fill();g.strokeStyle='#497ca7';g.lineWidth=2;g.stroke();
+ g.save();g.translate(646,180);g.rotate(Math.sin(t/2200)*.08);g.globalAlpha=.7;g.strokeStyle='#8fdcff';g.lineWidth=2;g.beginPath();g.moveTo(0,-48);g.bezierCurveTo(14,-30,15,2,10,30);g.lineTo(-10,30);g.bezierCurveTo(-15,2,-14,-30,0,-48);g.stroke();g.beginPath();g.moveTo(-10,22);g.lineTo(-24,38);g.lineTo(-8,34);g.moveTo(10,22);g.lineTo(24,38);g.lineTo(8,34);g.stroke();g.beginPath();g.arc(0,-24,5,0,7);g.stroke();g.restore();
+ g.fillStyle='#3b617f';g.globalAlpha=.25;glow(g,646,160,48,'#6ba9ff');g.globalAlpha=1;
+ // floor holo pad
+ const pul=.5+.5*Math.sin(t/680);if(!activeModal)glow(g,560,205,50,'rgba(107,169,255,'+(.05+pul*.04)+')');
+}
+function drawCommand(g,t){
+ const n=cycle.night,a='#5fe0ff';
+ // side console walls
+ for(const [x,y,w,h] of [[414,348,44,52],[662,348,44,52],[414,564,40,96],[666,564,40,96]]){
+  g.fillStyle='#10283c';g.strokeStyle='#356079';g.lineWidth=2;rr(g,x,y,w,h,4);g.fill();g.stroke();
+  g.fillStyle=a+'22';g.fillRect(x+5,y+6,w-10,4);g.fillStyle='#ffc46b55';g.fillRect(x+5,y+14,w*.4,3);
+ }
+ // desk
+ g.save();g.shadowColor='#0007';g.shadowBlur=12;g.shadowOffsetY=6;g.fillStyle='#24475f';rr(g,500,434,120,48,8);g.fill();g.restore();
+ g.strokeStyle='#5d8ca4';g.lineWidth=2;g.stroke();
+ g.fillStyle='#162d3e';g.fillRect(508,442,104,18);
+ drawMonitor(g,528,422,34,24,a);drawMonitor(g,574,422,34,24,a);drawMonitor(g,597,424,22,18,a);
+ // keyboard
+ g.fillStyle='#1a2c38';rr(g,537,464,46,10,2);g.fill();g.fillStyle='#0b151d';for(let i=0;i<5;i++)g.fillRect(540+i*8,466,5,2);
+ // chair
+ g.fillStyle='#1b3348';g.beginPath();g.arc(560,505,16,0,7);g.fill();g.strokeStyle='#3c6885';g.stroke();
+ // holographic planet above desk
+ g.save();g.translate(560,402);
+ const gr=g.createRadialGradient(-9,-9,2,0,0,30);gr.addColorStop(0,'#9df4ff');gr.addColorStop(.55,'#2f8fce');gr.addColorStop(1,'#173d6d');g.fillStyle=gr;g.beginPath();g.arc(0,0,24,0,7);g.fill();
+ g.strokeStyle='#8ff7ff';g.globalAlpha=.45;g.lineWidth=1.5;g.beginPath();g.ellipse(0,0,39,12,-.35,0,7);g.stroke();g.globalAlpha=.9;
+ const ang=t/1400;g.fillStyle='#dffcff';g.beginPath();g.arc(Math.cos(ang)*39,Math.sin(ang)*12,3,0,7);g.fill();g.restore();
+ g.fillStyle='#66e5ff';g.globalAlpha=.12;glow(g,560,402,68,'#5fe0ff');g.globalAlpha=1;
+ // plants and lower furniture
+ g.fillStyle='#203c3f';g.fillRect(462,636,30,22);g.fillStyle='#59efc2';g.globalAlpha=.5;g.beginPath();g.ellipse(477,628,18,20,0,0,7);g.fill();g.globalAlpha=1;
+ g.fillStyle='#2b4054';g.fillRect(620,644,50,18);g.fillStyle='#162634';g.fillRect(626,638,38,8);
+ // interaction glow
+ const pul=.5+.5*Math.sin(t/620);if(!activeModal)glow(g,560,485,52,'rgba(95,224,255,'+(.06+pul*.05)+')');
+}
+function drawRocketShape(g,x,y,s=1,opts={}){
+ const wire=!!opts.wire,accent=opts.accent||'#5fe0ff';
+ g.save();g.translate(x,y);g.scale(s,s);
+ if(!wire){g.fillStyle='rgba(0,0,0,.38)';g.beginPath();g.ellipse(0,6,42,10,0,0,7);g.fill()}
+ else{g.globalAlpha=.34}
+ const bodyGrad=g.createLinearGradient(-34,-240,34,0);bodyGrad.addColorStop(0,wire?'transparent':'#f7fbff');bodyGrad.addColorStop(.5,wire?'transparent':'#d8e6f2');bodyGrad.addColorStop(1,wire?'transparent':'#9bb4c8');
+ g.fillStyle=bodyGrad;g.strokeStyle=wire?accent:'#314d6b';g.lineWidth=wire?2.4:2.6;
+ g.beginPath();g.moveTo(0,-238);g.bezierCurveTo(26,-208,34,-170,32,-58);g.lineTo(27,-20);g.lineTo(-27,-20);g.lineTo(-32,-58);g.bezierCurveTo(-34,-170,-26,-208,0,-238);g.closePath();
+ if(wire){g.stroke()}else{g.fill();g.stroke()}
+ // accent band
+ g.fillStyle=wire?'transparent':accent;g.globalAlpha=wire?.5:.85;g.fillRect(-29,-68,58,9);g.globalAlpha=wire?.34:1;
+ // panel lines
+ g.strokeStyle=wire?accent+'aa':'rgba(54,83,108,.52)';g.lineWidth=1.2;
+ for(const yy of [-180,-148,-112,-42]){g.beginPath();g.moveTo(-27,yy);g.lineTo(27,yy);g.stroke()}
+ g.beginPath();g.moveTo(0,-230);g.lineTo(0,-22);g.globalAlpha=.25;g.stroke();g.globalAlpha=wire?.34:1;
+ // window
+ g.fillStyle=wire?'transparent':'#122a44';g.strokeStyle=wire?accent:'#6bd8ff';g.lineWidth=2;g.beginPath();g.arc(0,-181,13,0,7);if(!wire)g.fill();g.stroke();
+ if(!wire){g.fillStyle='#62dfff';g.beginPath();g.arc(-3,-184,6,0,7);g.fill();g.fillStyle='rgba(255,255,255,.55)';g.beginPath();g.arc(-5,-186,2,0,7);g.fill()}
+ // fins
+ g.fillStyle=wire?'transparent':accent+'cc';g.strokeStyle=wire?accent:'#3b6c8e';g.lineWidth=2;
+ g.beginPath();g.moveTo(-28,-72);g.lineTo(-57,-24);g.lineTo(-58,-5);g.lineTo(-25,-20);g.closePath();if(!wire)g.fill();g.stroke();
+ g.beginPath();g.moveTo(28,-72);g.lineTo(57,-24);g.lineTo(58,-5);g.lineTo(25,-20);g.closePath();if(!wire)g.fill();g.stroke();
+ // shield plates
+ if((current.parts.shield||0)>0){g.strokeStyle=wire?accent:'#7bdcc9';g.globalAlpha=.55;g.lineWidth=2;g.beginPath();g.moveTo(-23,-42);g.lineTo(-23,-95);g.moveTo(23,-42);g.lineTo(23,-95);g.stroke();g.globalAlpha=1}
+ // engines
+ g.fillStyle=wire?'transparent':'#4e6074';g.strokeStyle=wire?accent:'#26394e';g.lineWidth=1.5;
+ g.beginPath();g.moveTo(-18,-20);g.lineTo(-22,0);g.lineTo(-8,0);g.lineTo(-5,-20);g.closePath();if(!wire)g.fill();g.stroke();
+ g.beginPath();g.moveTo(18,-20);g.lineTo(22,0);g.lineTo(8,0);g.lineTo(5,-20);g.closePath();if(!wire)g.fill();g.stroke();
+ if(wire){g.strokeStyle=accent+'88';g.setLineDash([4,6]);g.beginPath();g.moveTo(-42,-10);g.lineTo(42,-10);g.stroke();g.setLineDash([])}
+ g.restore();
+}
+function drawPad(g,t){
+ const n=cycle.night,built=current.base.built===designSignature(),working=workingBuild(),flight=current.flight&&!current.flight.over;
+ // pad base
+ g.save();g.translate(1232,562);
+ g.fillStyle=`rgba(3,9,18,${.6})`;g.beginPath();g.ellipse(0,20,142,46,0,0,7);g.fill();
+ g.fillStyle=`rgb(${mix([36,50,58],[13,22,33],n).map(Math.round).join(',')})`;
+ g.beginPath();g.moveTo(-118,-72);g.lineTo(104,-72);g.lineTo(134,0);g.lineTo(108,70);g.lineTo(-110,70);g.lineTo(-136,0);g.closePath();g.fill();
+ g.strokeStyle=`rgba(137,180,204,${.3+n*.1})`;g.lineWidth=3;g.stroke();
+ // hazard ring
+ g.strokeStyle=`rgba(255,196,107,${.25+n*.18})`;g.lineWidth=2;g.setLineDash([16,13]);g.beginPath();g.arc(0,0,92,0,7);g.stroke();g.setLineDash([]);
+ g.strokeStyle=`rgba(105,220,244,${.18+n*.2})`;g.lineWidth=1;g.beginPath();g.arc(0,0,64,0,7);g.stroke();
+ // inner pad lights
+ for(let i=0;i<8;i++){const a=i/8*Math.PI*2,x=Math.cos(a)*108,y=Math.sin(a)*47;g.fillStyle=i%2?'#ffc46b':'#73e7ff';g.globalAlpha=.3+n*.4;g.beginPath();g.arc(x,y,2.4,0,7);g.fill()}g.globalAlpha=1;
+ g.restore();
+ // gantry
+ g.fillStyle=`rgba(32,52,66,${.9})`;g.fillRect(1108,265,18,330);g.fillStyle='rgba(69,103,126,.85)';g.fillRect(1126,300,58,8);g.fillRect(1126,370,46,7);g.fillRect(1126,440,58,8);
+ g.strokeStyle='rgba(158,205,230,.3)';g.lineWidth=1;for(let y=280;y<590;y+=28){g.beginPath();g.moveTo(1108,y);g.lineTo(1126,y+14);g.stroke();g.beginPath();g.moveTo(1126,y);g.lineTo(1108,y+14);g.stroke()}
+ g.fillStyle='#ff7d8e';g.globalAlpha=.5+.5*Math.sin(t/260);g.beginPath();g.arc(1117,258,4,0,7);g.fill();g.globalAlpha=1;
+ // fuel tanks
+ for(let i=0;i<2;i++){const x=1078+i*42,y=690;g.fillStyle='#28495e';g.beginPath();g.arc(x,y,17,0,7);g.fill();g.strokeStyle='#5a8ca8';g.lineWidth=2;g.stroke();g.fillStyle='#97e8ff';g.globalAlpha=.25;g.beginPath();g.arc(x-5,y-5,5,0,7);g.fill();g.globalAlpha=1}
+ // rocket state
+ if(flight){
+  // empty pad, smoke and scorch
+  g.fillStyle='rgba(4,7,10,.55)';g.beginPath();g.ellipse(1232,640,55,18,0,0,7);g.fill();
+  for(let i=0;i<4;i++){const y=610-i*19+Math.sin(t/700+i)*5;g.fillStyle=`rgba(175,205,220,${.1*(1-i/5)})`;g.beginPath();g.arc(1232+Math.sin(t/900+i*2)*16,y,15+i*4,0,7);g.fill()}
+ }else if(built||working){
+  drawRocketShape(g,1232,612,1.42,{accent:current.parts.rocket===2?'#9fdcff':current.parts.rocket===1?'#8ff0d1':'#5fe0ff'});
+  if(working){
+   // scaffolding
+   g.strokeStyle='rgba(145,183,204,.75)';g.lineWidth=2;
+   for(const x of [1182,1282]){g.beginPath();g.moveTo(x,360);g.lineTo(x,612);g.stroke()}
+   for(let y=390;y<610;y+=44){g.beginPath();g.moveTo(1180,y);g.lineTo(1284,y);g.stroke()}
+   for(let i=0;i<3;i++){const a=t/180+i*2.1,x=1282+Math.sin(a)*8,y=430+i*55;g.fillStyle='#ffd37b';g.beginPath();g.arc(x,y,2.4,0,7);g.fill()}
+  }else{
+   g.fillStyle='rgba(95,224,255,.08)';glow(g,1232,470,120,'rgba(95,224,255,.12)');
+  }
+ }else{
+  // holographic blueprint of the future rocket
+  drawRocketShape(g,1232,612,1.42,{wire:true,accent:'#6fc8ff'});
+  g.save();g.globalAlpha=.35;g.strokeStyle='#6fc8ff';g.lineWidth=1;g.setLineDash([3,5]);g.beginPath();g.moveTo(1160,420);g.lineTo(1304,420);g.stroke();g.restore();
+  g.fillStyle=`rgba(95,200,255,${.15+.06*Math.sin(t/800)})`;g.fillRect(1158,384,148,2);
+ }
+ // pad status beacons
+ const beacon=[built?'#59efc2':working?'#ffc46b':'#ff7d8e'];g.fillStyle=beacon[0];g.globalAlpha=.45+.4*Math.sin(t/500);g.beginPath();g.arc(1370,320,4,0,7);g.fill();g.globalAlpha=1;
+}
+function drawAstronaut(g,x,y,t){
+ const night=cycle.night,swing=hubSprite.walking?Math.sin(hubSprite.phase)*5:0;
+ g.save();g.translate(x,y);
+ // headlamp before body
+ if(night>.25){g.save();g.globalAlpha=night*.12;const cg=g.createLinearGradient(0,-18,hubSprite.facing*90,10);cg.addColorStop(0,'#d7fbff');cg.addColorStop(1,'rgba(215,251,255,0)');g.fillStyle=cg;g.beginPath();g.moveTo(0,-16);g.lineTo(hubSprite.facing*95,6);g.lineTo(hubSprite.facing*90,-34);g.closePath();g.fill();g.restore()}
+ g.fillStyle='rgba(0,0,0,.35)';g.beginPath();g.ellipse(0,3,15,5,0,0,7);g.fill();
+ // legs
+ g.fillStyle='#dce9f4';g.fillRect(-8+swing*.3,8,6,13);g.fillRect(3-swing*.3,8,6,13);
+ g.fillStyle='#4c6172';g.fillRect(-8+swing*.3,19,7,4);g.fillRect(3-swing*.3,19,7,4);
+ // backpack
+ g.fillStyle='#90a7b9';rr(g,-13,-18,8,20,3);g.fill();
+ // body
+ g.fillStyle='#f1f7fb';rr(g,-10,-19,20,29,7);g.fill();g.strokeStyle='#afc2d0';g.lineWidth=1.3;g.stroke();
+ g.fillStyle='#5fe0ff';g.fillRect(-2,-12,5,7);g.fillStyle='#ffc46b';g.fillRect(-2,-2,5,4);
+ // arms
+ g.strokeStyle='#dce9f4';g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(-9,-13);g.lineTo(-13+Math.sin(t/420)*2,1);g.moveTo(9,-13);g.lineTo(13-Math.sin(t/420)*2,1);g.stroke();
+ // helmet
+ g.fillStyle='#f5fbff';g.beginPath();g.arc(0,-27,12,0,7);g.fill();g.strokeStyle='#b9ccda';g.lineWidth=1.5;g.stroke();
+ g.fillStyle='#143b5b';g.beginPath();g.ellipse(0,-28,8.5,7,0,0,7);g.fill();
+ g.fillStyle='#6fe8ff';g.globalAlpha=.75;g.beginPath();g.ellipse(-2,-31,4.5,2.8,-.25,0,7);g.fill();g.globalAlpha=1;
+ g.restore();
+}
+function drawStationMarkers(g,t){
+ for(const [key,r] of Object.entries(ROOMS)){
+  const p=r.station,active=hoverRoom===key||hubSprite.onArrival===key;
+  g.save();g.translate(p.x,p.y);g.rotate(t/(key==='storage'?1800:1400));
+  g.strokeStyle=r.accent+(active?'aa':'4a');g.lineWidth=2;g.setLineDash([5,9]);g.beginPath();g.arc(0,0,active?34:27,0,7);g.stroke();g.setLineDash([]);
+  g.rotate(-t/(key==='storage'?1800:1400));
+  g.fillStyle=r.accent+(active?'aa':'55');g.beginPath();g.moveTo(0,-5);g.lineTo(5,0);g.lineTo(0,5);g.lineTo(-5,0);g.closePath();g.fill();
+  g.restore();
+ }
+}
+function drawNightLighting(g,t){
+ const n=cycle.night;if(n<.01)return;
+ g.save();g.fillStyle=`rgba(2,7,20,${.4*n})`;g.fillRect(0,0,1440,810);
+ g.globalCompositeOperation='lighter';
+ const lamps=[[205,350,'#a9ffe0',120],[205,540,'#a9ffe0',105],[565,160,'#b9e0ff',115],[560,410,'#b7f6ff',130],[560,610,'#b7f6ff',110],[915,350,'#ffe0aa',120],[915,520,'#ffe0aa',110],[365,450,'#9fdcff',80],[755,450,'#9fdcff',80],[580,300,'#9fdcff',80],[1232,480,'#8fe4ff',150]];
+ for(const [x,y,c,r] of lamps){const gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,c+'44');gr.addColorStop(.5,c+'13');gr.addColorStop(1,c+'00');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2)}
+ // pad floods
+ for(const [x,y] of [[1140,300],[1340,320]]){const gr=g.createRadialGradient(x,y,0,x,y,65);gr.addColorStop(0,'rgba(186,240,255,.34)');gr.addColorStop(1,'rgba(186,240,255,0)');g.fillStyle=gr;g.fillRect(x-65,y-65,130,130)}
+ g.restore();
+ // beacon blinks
+ const blink=.45+.55*Math.sin(t/420);g.fillStyle=`rgba(255,125,142,${blink})`;g.beginPath();g.arc(1117,258,3.5,0,7);g.fill();
+ g.fillStyle=`rgba(255,196,107,${.4+.4*Math.sin(t/600+1)})`;g.beginPath();g.arc(1370,320,3.5,0,7);g.fill();
+}
+function drawHover(g,t){
+ if(!hoverRoom||activeModal)return;const r=ROOMS[hoverRoom];
+ g.save();g.fillStyle=r.accent+'0c';rr(g,r.x+4,r.y+4,r.w-8,r.h-8,10);g.fill();
+ g.strokeStyle=r.accent+'88';g.lineWidth=2;g.setLineDash([8,7]);g.lineDashOffset=-t/40;rr(g,r.x+5,r.y+5,r.w-10,r.h-10,10);g.stroke();g.setLineDash([]);
+ g.restore();
+}
+function drawAlert(g,t){
+ const f=current.flight;if(!f?.event)return;
+ const x=560,y=360+Math.sin(t/280)*4;
+ g.save();g.translate(x,y);
+ g.shadowColor='#ff6b6b';g.shadowBlur=20;g.fillStyle='rgba(255,110,110,.92)';g.beginPath();g.moveTo(0,-17);g.lineTo(17,13);g.lineTo(-17,13);g.closePath();g.fill();g.shadowBlur=0;
+ g.fillStyle='#2a0d16';g.fillRect(-2.4,-7,4.8,11);g.beginPath();g.arc(0,8,2.2,0,7);g.fill();g.restore();
+}
+function drawDawn(g,t){
+ const age=t-fx.dawn;if(!fx.dawn||age>1800)return;const a=(1-age/1800)*.23;
+ const grad=g.createLinearGradient(0,0,0,810);grad.addColorStop(0,`rgba(255,226,160,${a})`);grad.addColorStop(.6,`rgba(255,175,100,${a*.35})`);grad.addColorStop(1,'rgba(255,150,90,0)');g.fillStyle=grad;g.fillRect(0,0,1440,810);
+}
+function drawHub(g,t){
+ drawGround(g,t);drawBuildingBase(g,t);drawCorridorFloors(g);
+ for(const room of ['science','storage','design','command'])drawFloor(g,room,t);
+ drawWalls(g,t);
+ drawScience(g,t);drawStorage(g,t);drawDesign(g,t);drawCommand(g,t);
+ drawStationMarkers(g,t);
+ drawPad(g,t);
+ drawNightLighting(g,t);
+ // event/success pulses
+ const pulse=(stamp,color,x,y,r)=>{const age=t-stamp;if(!stamp||age>1800)return;const a=1-age/1800;glow(g,x,y,r*(.8+a*.5),color,a*.22)};
+ pulse(fx.science,'rgba(89,239,194,1)',205,430,90);pulse(fx.storage,'rgba(255,196,107,1)',915,430,90);pulse(fx.build,'rgba(95,224,255,1)',1232,480,120);pulse(fx.arrival,'rgba(95,224,255,1)',560,440,100);
+ drawAstronaut(g,hubSprite.x,hubSprite.y,t);
+ drawHover(g,t);drawAlert(g,t);drawDawn(g,t);
+}
+function drawDesignPreview(){
+ const c=$('designPreview');if(!c)return;const g=c.getContext('2d'),w=c.width,h=c.height;
+ g.clearRect(0,0,w,h);const bg=g.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#0a1a30');bg.addColorStop(1,'#061020');g.fillStyle=bg;g.fillRect(0,0,w,h);
+ g.strokeStyle='rgba(107,169,255,.1)';g.lineWidth=1;for(let x=0;x<w;x+=24){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke()}for(let y=0;y<h;y+=24){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()}
+ // pad platform
+ g.fillStyle='rgba(20,43,63,.8)';g.beginPath();g.ellipse(w/2,h-24,84,16,0,0,7);g.fill();g.strokeStyle='rgba(107,169,255,.25)';g.stroke();
+ const built=current.base.built===designSignature();
+ drawRocketShape(g,w/2,h-26,.82,{wire:!built,accent:'#6fc8ff'});
+ g.strokeStyle='rgba(107,169,255,.22)';g.setLineDash([3,5]);g.beginPath();g.moveTo(16,34);g.lineTo(w-16,34);g.stroke();g.setLineDash([]);
+}
+/* ---------- flight scene ---------- */
+let spacePos=0;
+function quadPoint(p0,p1,p2,t){const m=1-t;return{x:m*m*p0.x+2*m*t*p1.x+t*t*p2.x,y:m*m*p0.y+2*m*t*p1.y+t*t*p2.y}}
+function quadAngle(p0,p1,p2,t){const x=2*(1-t)*(p1.x-p0.x)+2*t*(p2.x-p1.x),y=2*(1-t)*(p1.y-p0.y)+2*t*(p2.y-p1.y);return Math.atan2(y,x)}
+function drawPlanet(g,x,y,r,key,t){
+ const cols=key==='moon'?['#f5f8ff','#aab6c5','#4b596d']:key==='mars'?['#ffd0a3','#d57459','#6d2f3c']:['#9df4ff','#2c86c9','#112d55'];
+ const glowCol=key==='moon'?'rgba(190,210,255,.16)':key==='mars'?'rgba(255,132,91,.18)':'rgba(95,205,255,.2)';
+ glow(g,x,y,r*2.3,glowCol);
+ const body=g.createRadialGradient(x-r*.36,y-r*.38,r*.12,x,y,r);body.addColorStop(0,cols[0]);body.addColorStop(.52,cols[1]);body.addColorStop(1,cols[2]);
+ g.fillStyle=body;g.beginPath();g.arc(x,y,r,0,7);g.fill();
+ g.save();g.beginPath();g.arc(x,y,r,0,7);g.clip();
+ if(key==='earth'){
+  g.fillStyle='rgba(83,200,157,.78)';g.beginPath();g.ellipse(x-r*.18,y-r*.12,r*.32,r*.46,-.62,0,7);g.ellipse(x+r*.28,y+r*.22,r*.24,r*.34,.6,0,7);g.ellipse(x-r*.36,y+r*.42,r*.15,r*.22,.2,0,7);g.fill();
+  g.fillStyle='rgba(255,255,255,.25)';for(let i=0;i<3;i++){g.beginPath();g.ellipse(x-r*.1+i*r*.3,y-r*.4+Math.sin(i+t/5000)*r*.15,r*.28,r*.08,.2,0,7);g.fill()}
+ }else if(key==='moon'){
+  g.fillStyle='rgba(68,82,102,.4)';for(let i=0;i<10;i++){g.beginPath();g.arc(x+Math.cos(i*2.3)*r*.6,y+Math.sin(i*2.9)*r*.58,r*(.05+(i%3)*.025),0,7);g.fill()}
+ }else{
+  g.fillStyle='rgba(123,54,55,.4)';for(let i=0;i<7;i++){g.beginPath();g.ellipse(x+Math.cos(i*2.1)*r*.45,y+Math.sin(i*2.7)*r*.45,r*.22,r*.09,i,0,7);g.fill()}
+  g.fillStyle='rgba(255,240,230,.55)';g.beginPath();g.ellipse(x,y-r*.8,r*.3,r*.13,0,0,7);g.ellipse(x,y+r*.82,r*.22,r*.1,0,0,7);g.fill();
+ }
+ const shade=g.createRadialGradient(x+r*.4,y+r*.3,r*.1,x,y,r*1.12);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.68,'rgba(0,0,0,.08)');shade.addColorStop(1,'rgba(0,0,0,.62)');g.fillStyle=shade;g.fillRect(x-r,y-r,r*2,r*2);
+ g.restore();
+ // atmosphere rim
+ g.strokeStyle=key==='moon'?'rgba(220,235,255,.16)':key==='mars'?'rgba(255,170,130,.2)':'rgba(130,235,255,.28)';g.lineWidth=2;g.beginPath();g.arc(x,y,r+1,0,7);g.stroke();
+}
+function drawSpaceShip(g,x,y,angle,t,scale=1){
+ g.save();g.translate(x,y);g.rotate(angle);
+ // engine trail
+ const grad=g.createLinearGradient(-35,0,-90,0);grad.addColorStop(0,'rgba(95,224,255,.55)');grad.addColorStop(1,'rgba(95,224,255,0)');
+ g.fillStyle=grad;g.beginPath();g.moveTo(-30,-3);g.lineTo(-92+Math.sin(t/80)*3,0);g.lineTo(-30,3);g.closePath();g.fill();
+ g.fillStyle='rgba(255,196,107,.7)';g.beginPath();g.moveTo(-28,-2);g.lineTo(-52-Math.sin(t/90)*4,0);g.lineTo(-28,2);g.closePath();g.fill();
+ g.scale(scale,scale);
+ // solar panels
+ g.fillStyle='#1c5c8f';g.strokeStyle='#7edfff';g.lineWidth=1.4;
+ g.fillRect(-14,-26,26,14);g.strokeRect(-14,-26,26,14);g.fillRect(-14,12,26,14);g.strokeRect(-14,12,26,14);
+ g.strokeStyle='rgba(126,223,255,.45)';g.beginPath();g.moveTo(-8,-26);g.lineTo(-8,-12);g.moveTo(0,-26);g.lineTo(0,-12);g.moveTo(-8,12);g.lineTo(-8,26);g.moveTo(0,12);g.lineTo(0,26);g.stroke();
+ // body
+ g.fillStyle='#e8f3fb';g.beginPath();g.moveTo(38,0);g.bezierCurveTo(26,-9,4,-11,-18,-7);g.lineTo(-25,0);g.lineTo(-18,7);g.bezierCurveTo(4,11,26,9,38,0);g.fill();g.strokeStyle='#91b6cd';g.lineWidth=1.2;g.stroke();
+ g.fillStyle='#4fbfe6';g.fillRect(-9,-3,12,6);g.fillStyle='#123f66';g.beginPath();g.arc(18,-2,4,0,7);g.fill();g.fillStyle='#89ecff';g.beginPath();g.arc(19,-3,2,0,7);g.fill();
+ g.restore();
+}
+function drawSpace(g,t,dt){
+ const f=current.flight,sc=SC[f?.design.scenario||current.scenario]||SC.earth,key=f?.design.scenario||current.scenario;
+ const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#030817');bg.addColorStop(.6,'#071126');bg.addColorStop(1,'#02050e');g.fillStyle=bg;g.fillRect(0,0,W,H);
+ glow(g,W*.74,H*.3,Math.min(W,H)*.48,'rgba(56,110,210,.13)');glow(g,W*.18,H*.86,Math.min(W,H)*.45,'rgba(118,74,190,.09)');
+ // stars
+ for(const s of stars){const x=(s.x*W+t*.009*(s.r+1.2))%W,y=s.y*H*.94;const a=.22+.55*Math.abs(Math.sin(t/1800+s.p));g.globalAlpha=a;g.fillStyle=s.r>1.3?'#c8f3ff':'#b8c6df';g.beginPath();g.arc(x,y,s.r,0,7);g.fill()}
+ g.globalAlpha=1;
+ // faint nebula streaks
+ g.save();g.globalAlpha=.08;g.strokeStyle='#60a8ff';g.lineWidth=1;for(let i=0;i<3;i++){g.beginPath();g.moveTo(0,H*(.25+i*.1));g.bezierCurveTo(W*.3,H*(.1+i*.12),W*.65,H*(.4+i*.08),W,H*(.2+i*.09));g.stroke()}g.restore();
+ if(!f){
+  drawPlanet(g,W*.73,H*.44,Math.min(W,H)*.18,key,t);return;
+ }
+ if(f.phase==='transit'){
+  const t0=f.transit,total=t0.total;
+  const p0={x:W*.16,y:H*.76},p1={x:W*.42,y:H*.4},p2={x:W*.7,y:H*.36};
+  drawPlanet(g,W*.83,H*.34,Math.min(W,H)*.145,key,t);
+  // route
+  g.save();g.strokeStyle='rgba(111,203,255,.2)';g.lineWidth=1.5;g.setLineDash([4,9]);g.beginPath();g.moveTo(p0.x,p0.y);g.quadraticCurveTo(p1.x,p1.y,p2.x,p2.y);g.stroke();g.setLineDash([]);
+  for(let i=0;i<total;i++){const q=quadPoint(p0,p1,p2,i/Math.max(1,total));g.fillStyle=i<t0.day?'#7ef0ff':'rgba(132,185,217,.18)';g.beginPath();g.arc(q.x,q.y,i<t0.day?3:2.2,0,7);g.fill()}
+  g.restore();
+  const target=clamp(t0.day/Math.max(1,total),0,1);spacePos+=(target-spacePos)*(1-Math.exp(-dt/750));
+  const q=quadPoint(p0,p1,p2,spacePos),ang=quadAngle(p0,p1,p2,spacePos);
+  drawSpaceShip(g,q.x,q.y,ang,t,Math.min(W,H)/760);
+  if(f.event?.kind==='transit'){
+   for(let i=0;i<9;i++){const a=t/900+i*2.1,rr2=Math.min(W,H)*(.1+((i*37)%40)/300);g.fillStyle='rgba(188,160,140,.65)';g.beginPath();g.ellipse(W*.68+Math.cos(a)*rr2,H*.4+Math.sin(a)*rr2*.5,7+(i%3)*3,4+(i%2)*2,a,0,7);g.fill()}
+  }
+ }else{
+  drawPlanet(g,W*.64,H*.5,Math.min(W,H)*.22,key,t);
+  const cx=W*.64,cy=H*.5,rx=Math.min(W,H)*.34,ry=Math.min(W,H)*.12;
+  g.save();g.strokeStyle='rgba(117,207,255,.22)';g.lineWidth=1.5;g.setLineDash([5,10]);g.beginPath();g.ellipse(cx,cy,rx,ry,-.12,0,7);g.stroke();g.setLineDash([]);
+  const a=-.12+t/9000;const sx=cx+Math.cos(a)*rx,sy=cy+Math.sin(a)*ry;
+  drawSpaceShip(g,sx,sy,a+Math.PI/2,t,Math.min(W,H)/900);
+  g.restore();
+  // orbital scan rings
+  g.strokeStyle='rgba(95,224,255,.1)';g.lineWidth=1;for(let i=1;i<3;i++){g.beginPath();g.arc(cx,cy,Math.min(W,H)*(.22+i*.04),0,7);g.stroke()}
+  if(f.event){g.fillStyle=`rgba(255,125,142,${.18+.14*Math.sin(t/300)})`;g.beginPath();g.arc(W*.64,H*.5,Math.min(W,H)*.26,0,7);g.fill()}
+ }
+ if(f.over){g.fillStyle='rgba(0,3,10,.25)';g.fillRect(0,0,W,H)}
+}
+/* ---------- loop and init ---------- */
+let lastFrame=performance.now();
+function loop(now){
+ const dt=Math.min(96,Math.max(0,now-lastFrame));lastFrame=now;clock=now;
+ tickCycle(dt);
+ if(scene==='hub')updateMovement(dt);
+ g2d.setTransform(view.dpr,0,0,view.dpr,0,0);
+ g2d.clearRect(0,0,W,H);
+ if(scene==='hub'){
+  drawBackdrop(g2d,now);
+  g2d.save();g2d.translate(view.ox,view.oy);g2d.scale(view.scale,view.scale);drawHub(g2d,now);g2d.restore();
+ }else{
+  drawSpace(g2d,now,dt);
+ }
+ updateDayRing();
+ if(now-lastHud>400){refreshHudNumbers();lastHud=now}
+ if(now-lastSave>8000){save();lastSave=now}
+ requestAnimationFrame(loop);
+}
+function sceneToWorld(e){
+ const r=canvas.getBoundingClientRect();
+ return{x:(e.clientX-r.left-view.ox)/view.scale,y:(e.clientY-r.top-view.oy)/view.scale};
+}
+function padHit(x,y){return x>1055&&y>140}
+function initUI(){
+ window.addEventListener('resize',resizeCanvas);
+ $('navHub').onclick=()=>{closeModal();scene='hub';updateSceneNav()};
+ $('navConsole').onclick=()=>openModal('command');
+ document.addEventListener('click',e=>{
+  const cl=e.target.closest('[data-close]');if(cl){e.preventDefault();closeModal();return}
+  const act=e.target.closest('[data-act]');if(act){e.preventDefault();handleAction(act)}
+ });
+ $('modalBody').addEventListener('change',e=>{
+  const sel=e.target.closest('[data-part]');if(!sel)return;
+  if(current.flight&&!current.flight.over)return;
+  const key=sel.dataset.part,val=Number(sel.value);
+  if(!PARTS[key]||!Number.isInteger(val)||val===current.parts[key])return;
+  current.parts[key]=val;const changed=invalidateBuild();if(changed)showToastIcon('🛠️');
+  save();refreshHudNumbers();renderModal();
+ });
+ $('modalBody').addEventListener('input',e=>{
+  if(e.target.id!=='altRange')return;
+  if(current.flight&&!current.flight.over)return;
+  current.alt=Number(e.target.value);updateDesignLive();save();
+ });
+ canvas.addEventListener('mousemove',e=>{
+  if(e.pointerType&&e.pointerType!=='mouse')return;
+  const p=sceneToWorld(e);
+  const r=roomAt(p.x,p.y);
+  hoverRoom=r;
+  canvas.style.cursor=(r||padHit(p.x,p.y))?'pointer':'default';
+ });
+ canvas.addEventListener('mouseleave',()=>{hoverRoom=null;canvas.style.cursor='default'});
+ canvas.addEventListener('click',e=>{
+  if(activeModal)return;
+  if(scene==='space')return;
+  const p=sceneToWorld(e),x=p.x,y=p.y;
+  if(padHit(x,y)){
+   if(current.flight&&!current.flight.over){scene='space';updateSceneNav();showToastIcon('🛰️');return}
+   if(current.base.built===designSignature()||workingBuild()){openModal('command');return}
+   openModal('design');return;
+  }
+  const room=roomAt(x,y);
+  if(room){navigateRoom(room);return}
+  if(walkable(x,y))setWalkTarget(x,y);
+ });
+ const moveCodes=['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+ window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){resolveEsc();return}
+  if(activeModal)return;
+  if(scene==='space')return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;
+  if(moveCodes.includes(e.key)){e.preventDefault();moveKeys[e.key]=true;hubSprite.route=[];hubSprite.onArrival=null;return}
+  if(e.key==='e'||e.key==='E'){e.preventDefault();const room=roomAt(hubSprite.x,hubSprite.y);if(room)openModal(room);return}
+ });
+ window.addEventListener('keyup',e=>{delete moveKeys[e.key]});
+ window.addEventListener('blur',()=>{for(const k of Object.keys(moveKeys))delete moveKeys[k]});
+ window.addEventListener('beforeunload',save);
+}
+window.__COSMOLAB__={
+ get state(){return current},get cycle(){return cycle},get scene(){return scene},
+ advanceDay,openModal,closeModal,selectMission,startResearch,orderSupply,startBuild,launchMission,missionAction,resolveEvent,clearForNewMission,resetGame,
+ setScene(v){scene=v;updateSceneNav()}
+};
+resizeCanvas();initUI();refreshHudNumbers();updateDayRing();updateSceneNav();save();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
